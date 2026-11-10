@@ -1,0 +1,10 @@
+# Lectura de documentos para el segundo cerebro (04-11): pdftotext/pdfinfo (poppler-utils) y docx2txt.
+# Deriva de la imagen desplegada; no cambia agente, WebUI ni Compose salvo la etiqueta.
+# Construir en Neo: docker build -f Dockerfile.para-lectura -t hermes-webui-sip:para-lectura .
+# Vuelta atrás: image hermes-webui-sip:ssh-sandbox-test (se conserva).
+FROM hermes-webui-sip:ssh-sandbox-test
+USER root
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends poppler-utils docx2txt \
+ && rm -rf /var/lib/apt/lists/* \
+ && pdftotext -v 2>&1 | head -1 && command -v docx2txt

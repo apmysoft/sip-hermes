@@ -1,0 +1,4 @@
+name: sip-imagen
+version: 1.5.0
+description: "Imagen (FLUX y Qwen-Image con texto), edición (Qwen-Image-Edit), ampliación (Real-ESRGAN) y música (ACE-Step) y vídeo (LTX) en ComfyUI de HALO; resultados en /workspace/imagenes, /audio y /video."
+author: SIP

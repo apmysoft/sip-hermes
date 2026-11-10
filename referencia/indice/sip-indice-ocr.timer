@@ -1,0 +1,9 @@
+[Unit]
+Description=SIP: OCR del índice de PARA en HALO cada noche (02:00-06:00, horario valle; decisión del usuario 09-11)
+
+[Timer]
+OnCalendar=*-*-* 02:00
+Persistent=false
+
+[Install]
+WantedBy=timers.target

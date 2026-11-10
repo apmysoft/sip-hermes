@@ -1,0 +1,55 @@
+#!/bin/sh
+# sip-ausencia on|off [--simular] | estado — modo ausencia de SIP (v2.4 M.15; decisiones del usuario, 03-11).
+# on: para los automatismos que actúan (traspaso, barrido del gestor, evaluación de modelos, curación de
+# memoria) y congela el TTL de purga; el WOL solo atiende peticiones explícitas (skill halo-wake), no las
+# del plugin de cada turno. Siguen: resumen matutino (heartbeat), informe de actualizaciones, parches de
+# seguridad automáticos (decisión del usuario), copias de LiteLLM y de Kopia. Sin auto-reparaciones: SIP
+# no tiene ninguna activa. Sobrevive a un reinicio; off restaura lo que había según la marca.
+set -eu
+MARCA=/var/lib/sip-ausencia/activa
+OUTBOX=/var/lib/sip-notify/outbox
+UNIDADES="sip-traspaso.timer sip-gestor-nocturno.timer sip-model-eval.timer sip-memory-review.timer filegate-ttl.timer"
+
+SIM=""; [ "${2:-}" = "--simular" ] && SIM=1
+run() { if [ -n "$SIM" ]; then echo "[simular] $*"; else "$@"; fi; }
+avisar() {
+    [ -n "$SIM" ] && { echo "[simular] aviso: $1"; return; }
+    f="ausencia-$(date +%Y%m%d-%H%M%S).txt"
+    printf '%s\n' "$1" > "$OUTBOX/.$f" && mv "$OUTBOX/.$f" "$OUTBOX/$f" || true
+}
+
+activar() {
+    [ -e "$MARCA" ] && { echo "ya en modo ausencia desde $(stat -c %y "$MARCA" | cut -c1-19)"; exit 0; }
+    [ -e /var/lib/sip-panico/estado ] && { echo "modo pánico activo: desactívalo antes (sip-panico start)"; exit 1; }
+    tmp=$(mktemp)
+    for u in $UNIDADES; do
+        systemctl is-enabled -q "$u" 2>/dev/null && echo "$u" >> "$tmp"
+    done
+    run install -d -m 0755 /var/lib/sip-ausencia
+    # La marca guarda qué unidades estaban activas; su existencia la lee sip-wol-halo.
+    if [ -n "$SIM" ]; then sed 's/^/[simular] marca: /' "$tmp"; else install -m 0644 "$tmp" "$MARCA"; fi
+    rm -f "$tmp"
+    for u in $UNIDADES; do run systemctl disable --now "$u"; done
+    avisar "SIP: modo ausencia ACTIVO. Parados traspaso, gestor nocturno, evaluación, curación de memoria y purga TTL; HALO solo despierta si lo pides (halo-wake). Para volver: sudo sip-ausencia off"
+}
+
+desactivar() {
+    [ -e "$MARCA" ] || { echo "no hay modo ausencia activo"; exit 0; }
+    while read -r u; do run systemctl enable --now "$u"; done < "$MARCA"
+    run rm -f "$MARCA"
+    avisar "SIP: modo ausencia desactivado; automatismos restaurados."
+}
+
+estado() {
+    if [ -e "$MARCA" ]; then echo "MODO AUSENCIA ACTIVO desde $(stat -c %y "$MARCA" | cut -c1-19)"; else echo "modo normal"; fi
+    for u in $UNIDADES sip-morning.timer sip-updates-report.timer apt-daily-upgrade.timer sip-wol-halo.path; do
+        printf '  %-28s %s %s\n' "$u" "$(systemctl is-enabled "$u" 2>/dev/null || true)" "$(systemctl is-active "$u" 2>/dev/null || true)"
+    done
+}
+
+case "${1:-}" in
+    on) activar ;;
+    off) desactivar ;;
+    estado) estado ;;
+    *) echo "uso: sip-ausencia on|off [--simular] | estado" >&2; exit 2 ;;
+esac

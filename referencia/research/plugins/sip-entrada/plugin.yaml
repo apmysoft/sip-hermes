@@ -1,0 +1,4 @@
+name: sip-entrada
+version: 1.0.0
+description: "Entrega notas de RESEARCH en 00_entrada mediante filegate; no puede leer ni borrar."
+author: SIP

@@ -1,0 +1,10 @@
+[Unit]
+Description=SIP Gestor de Entrada — vigila peticiones de Hermes
+Documentation=https://github.com/usuario/sip-inventario
+
+[Path]
+DirectoryNotEmpty=${DOCKER_DATA}/hermes/workspace/_gestor/requests
+Unit=sip-gestor-bridge.service
+
+[Install]
+WantedBy=paths.target

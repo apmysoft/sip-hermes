@@ -1,0 +1,12 @@
+[Unit]
+Description=Start hermes-webui after tailscale0 has its 100.x IP
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'for i in $(seq 1 120); do ip -4 a show tailscale0 2>/dev/null | grep -q "inet 100\." && { docker network connect sip hermes-webui 2>/dev/null || true; docker start hermes-webui; exit 0; }; sleep 2; done; echo "tailscale0 sin IP tras 240s" >&2; exit 1'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

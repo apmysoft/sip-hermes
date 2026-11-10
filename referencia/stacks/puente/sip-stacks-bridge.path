@@ -1,0 +1,9 @@
+[Unit]
+Description=SIP puente de stacks — vigila peticiones de Hermes
+
+[Path]
+DirectoryNotEmpty=${DOCKER_DATA}/hermes/workspace/_stacks/requests
+Unit=sip-stacks-bridge.service
+
+[Install]
+WantedBy=paths.target

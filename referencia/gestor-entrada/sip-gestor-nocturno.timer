@@ -1,0 +1,9 @@
+[Unit]
+Description=SIP Gestor de Entrada — barrido nocturno a las 3:00 (horas valle, antes del resumen de las 8:00)
+
+[Timer]
+OnCalendar=*-*-* 03:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

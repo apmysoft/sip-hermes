@@ -1,0 +1,9 @@
+[Unit]
+Description=SIP WOL para el OCR del índice: vigila sus peticiones (09-11)
+
+[Path]
+DirectoryNotEmpty=/var/lib/sip-indice-wol/requests
+Unit=sip-wol-indice.service
+
+[Install]
+WantedBy=paths.target

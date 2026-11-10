@@ -1,0 +1,71 @@
+# HERMES_HOME de hermes-research — CANDIDATA v0.22.7 (05-11). Sin secretos: LITELLM_API_KEY llega por env_file.
+# Cambios frente a la activa: navegador = plugin sip-navegador (0.22.7 retira browser_navigate; browser_exec
+# exige terminal), sin sip-browser-guard (su gancho era de browser_navigate), tool_search desactivado.
+model:
+  default: gemini-3.5-flash-lite
+  provider: custom:litellm
+providers:
+  litellm:
+    base_url: http://10.20.0.10:4000/v1
+    key_env: LITELLM_API_KEY
+    default_model: gemini-3.5-flash-lite
+agent:
+  api_max_retries: 1
+fallback_providers:
+  - provider: custom:litellm
+    model: gemini-3.8-flash
+platform_toolsets:
+  cli:
+    - navegador
+    - entrada
+    - medios
+  # API para sip-gateway (Fase 7). Sin esto hereda hermes-api-server: terminal, file, code_execution...
+  api_server:
+    - navegador
+    - entrada
+    - medios
+# Fase 8 (v2.4, decisión 9): ninguna escritura de memoria ni de skills sin revisión humana.
+memory:
+  write_approval: true
+skills:
+  write_approval: true
+plugins:
+  enabled:
+    - sip-entrada
+    - sip-navegador
+    - sip-medios
+browser:
+  # 0.22.7: sin `backend` (v52 lo retira). browser_exec no aparece: RESEARCH no tiene terminal.
+  allow_private_urls: false
+tools:
+  # 0.22.x esconde las herramientas de plugins tras tool_search (más llamadas al modelo); con pocas, todas visibles.
+  tool_search:
+    enabled: "off"
+# Defensa secundaria (v2.4 I): la primaria es la red. Banca, correo, redes personales, router.
+security:
+  # Fase 8: sin instalaciones de paquetes en tiempo de ejecución (cadena de suministro).
+  allow_lazy_installs: false
+  website_blocklist:
+    enabled: true
+    domains:
+      - accounts.google.com
+      - mail.google.com
+      - outlook.com
+      - outlook.live.com
+      - proton.me
+      - facebook.com
+      - instagram.com
+      - tiktok.com
+      - x.com
+      - twitter.com
+      - linkedin.com
+      - paypal.com
+      - bizum.es
+      - santander.com
+      - bancosantander.es
+      - bbva.es
+      - caixabank.es
+      - bancsabadell.com
+      - ing.es
+      - openbank.es
+      - ${LAN_GATEWAY}

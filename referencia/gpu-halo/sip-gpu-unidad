@@ -1,0 +1,12 @@
+#!/bin/sh
+# cmd de llama-swap para un servidor de GPU que es una unidad de systemd (05-11, planificador de GPU de HALO).
+# Arranca la unidad (polkit: 50-sip-llm-gpu.rules) y se queda en primer plano mientras siga activa, como
+# haría un llama-server. llama-swap la para con cmdStop (systemctl stop); si recibe TERM, la para también.
+# Uso: sip-gpu-unidad sip-comfyui.service|sip-whisper-gpu.service|sip-medios.service
+set -u
+case "${1:-}" in sip-comfyui.service|sip-whisper-gpu.service|sip-medios.service) u=$1;; *) echo "unidad no permitida: ${1:-}" >&2; exit 2;; esac
+trap 'systemctl stop "$u"; exit 0' TERM INT
+systemctl start "$u" || exit 1
+while :; do
+  case "$(systemctl is-active "$u")" in active|activating|reloading) sleep 2 & wait $!;; *) exit 1;; esac
+done

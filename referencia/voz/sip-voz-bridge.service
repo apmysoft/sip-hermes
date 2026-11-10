@@ -1,0 +1,23 @@
+[Unit]
+Description=SIP: transcribe notas de voz de Telegram con Whisper en HALO
+StartLimitIntervalSec=60
+StartLimitBurst=30
+
+[Service]
+Type=oneshot
+User=sip-voz
+Group=sip-voz
+SupplementaryGroups=sip-wol
+UMask=0027
+ExecStart=/usr/local/sbin/sip-voz-bridge.py
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/sip-voz ${DOCKER_DATA}/hermes/workspace/_wol/requests
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+CapabilityBoundingSet=
+TimeoutStartSec=900

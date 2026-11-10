@@ -1,0 +1,17 @@
+# hermes-webui-sip — WebUI v0.52.113 (commit c67fd2d) + agente v2026.9.14 (digest pin)
+# Build: docker build -t hermes-webui-sip:v0.52.113-a2026.9.14 -f Dockerfile.webui .
+FROM hermes-webui:v0.52.113
+
+# Código del agente, pineado por digest (fuente de la imagen oficial)
+COPY --from=nousresearch/hermes-agent@sha256:99641e57ec762c59e54cb44aa6746b7fc68c18b3c5ddb088af54234c613d9294 \
+     /opt/hermes /opt/hermes-agent
+
+# venv del WebUI en /app/venv (el init lo reutiliza vía .deps_installed → fast restart).
+# El rsync /apptoo→/app del init es sin --delete: este venv baked sobrevive.
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
+ && install -m 0755 /root/.local/bin/uv /usr/local/bin/uv \
+ && uv venv /app/venv \
+ && VIRTUAL_ENV=/app/venv uv pip install -e "/opt/hermes-agent[all]" \
+ && VIRTUAL_ENV=/app/venv uv pip install "hindsight-client>=0.4.22" \
+ && touch /app/venv/.deps_installed \
+ && chown -R 1000:1000 /app/venv

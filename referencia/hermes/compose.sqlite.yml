@@ -1,0 +1,5 @@
+# Usar junto a docker-compose.yml para desplegar la candidata ya probada.
+services:
+  hermes-webui:
+    image: hermes-webui-sip:sqlite-3.53.4-test
+    pull_policy: never

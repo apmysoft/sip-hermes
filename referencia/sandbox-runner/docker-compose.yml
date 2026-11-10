@@ -1,0 +1,53 @@
+name: sip-sandbox-runner
+
+services:
+  runner:
+    build: .
+    image: hermes-sandbox-runner:sip-0.1
+    container_name: hermes-sandbox-runner
+    restart: unless-stopped
+    # Logs de Docker acotados (M.12, 03-11): 10m x 5 por contenedor.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - sandbox
+    # sin "ports": solo alcanzable dentro de la red sandbox (y desde sip con la
+    # excepción nftables acordada). internal=true impide el egress externo.
+    read_only: true
+    tmpfs:
+      - /run
+      - /tmp
+    cap_drop:
+      - ALL
+    cap_add:
+      # Mínimas capabilities para sshd y la ruta de vuelta (ver entrypoint):
+      # NET_ADMIN (ruta 172.29/24), SYS_CHROOT (privsep de sshd),
+      # SETUID/SETGID (sshd baja a usuarios no privilegiados), KILL (limpieza
+      # de hijos privsep), CHOWN (entrypoint: propietario de /workspace).
+      - NET_ADMIN
+      - SYS_CHROOT
+      - SETUID
+      - SETGID
+      - KILL
+      - CHOWN
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 2g
+    cpus: 2.0
+    pids_limit: 256
+    volumes:
+      - runner-workspace:/workspace
+      - runner-ssh-hostkeys:/etc/ssh/hostkeys
+      - runner-authkeys:/home/sandbox/.ssh:ro
+
+networks:
+  sandbox:
+    external: true
+
+volumes:
+  runner-workspace:
+  runner-ssh-hostkeys:
+  runner-authkeys:

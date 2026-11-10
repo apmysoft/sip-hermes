@@ -1,0 +1,15 @@
+[Unit]
+Description=SIP actividad de HALO: muestra (la pide Neo por sip-energia)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/sip-actividad.py muestra
+TimeoutStartSec=90
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/run/sip-energia /run/sip-energia-pet
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_NETLINK

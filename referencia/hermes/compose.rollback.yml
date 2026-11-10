@@ -1,0 +1,6 @@
+# Rollback de imagen; conserva /app/venv/bin/python operativo del compose base.
+# No restaura datos/config automáticamente: revisar necesidad antes de hacerlo.
+services:
+  hermes-webui:
+    image: hermes-webui-sip:v0.52.113-a2026.9.14
+    pull_policy: never

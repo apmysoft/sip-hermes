@@ -1,0 +1,6 @@
+name: sip-halo-wake
+version: 1.0.0
+description: "Despierta HALO antes del turno si el modelo es local y HALO no responde. Sin LLM."
+author: SIP
+hooks:
+  - pre_llm_call

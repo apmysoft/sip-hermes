@@ -1,0 +1,9 @@
+[Unit]
+Description=SIP: garantías de PARA cada noche (02:15; prioridad por tipo; decisión del usuario 09-11)
+
+[Timer]
+OnCalendar=*-*-* 02:15
+Persistent=true
+
+[Install]
+WantedBy=timers.target

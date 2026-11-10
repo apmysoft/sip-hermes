@@ -1,0 +1,9 @@
+[Unit]
+Description=SIP apagado de HALO: vigila peticiones de PERSONAL
+
+[Path]
+DirectoryNotEmpty=${DOCKER_DATA}/hermes/workspace/_energia/requests
+Unit=sip-energia.service
+
+[Install]
+WantedBy=paths.target

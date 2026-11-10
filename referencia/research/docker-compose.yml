@@ -1,0 +1,73 @@
+# Zona RESEARCH (v2.4, Fase 6): contenedor propio, sin PARA, /workspace ni tailnet. Solo escribe
+# en 00_entrada y staging, por el socket de filegate. Se invoca con: docker exec hermes-research hermes -z "..."
+# o, desde sip-gateway (Fase 7), por su API en 10.22.0.10:8642 (red internal gw-research, con clave).
+# La clave es virtual (sk-research-cloud). Rollback: docker compose down -v.
+name: sip-research
+
+services:
+  hermes-research:
+    image: hermes-research:0.22.7-ab0.26.0-ytdlp2026.10.26  # agente v0.22.7 + agent-browser + yt-dlp (Dockerfile, 05-11)
+    container_name: hermes-research
+    restart: unless-stopped
+    # Logs de Docker acotados (M.12, 03-11): 10m x 5 por contenedor.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    init: true
+    # Solo la plataforma API: no hay TELEGRAM_* en su entorno.
+    entrypoint: ["hermes", "gateway", "run"]
+    user: "995:985"
+    group_add:
+      - "986"
+    environment:
+      - HERMES_HOME=/opt/data
+      - HOME=/opt/data
+      - XDG_CACHE_HOME=/tmp/cache
+      - AGENT_BROWSER_EXECUTABLE_PATH=/opt/hermes/tools/chromium-1208/chrome-linux64/chrome  # ruta de 0.22.7
+      # El sandbox de Chromium no arranca sin capacidades; lo contiene este contenedor.
+      - AGENT_BROWSER_ARGS=--no-sandbox
+      - API_SERVER_ENABLED=true
+      - API_SERVER_HOST=10.22.0.10
+      - API_SERVER_PORT=8642
+    env_file:
+      - /root/sip-litellm-research-cloud.env
+      - /root/sip-research-api.env
+    volumes:
+      - hermes-research-home:/opt/data
+      - type: bind
+        source: /run/filegate.sock
+        target: /run/filegate.sock
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /etc/filegate/tokens/research.tok
+        target: /run/secrets/filegate.tok
+        read_only: true
+        bind:
+          create_host_path: false
+    networks:
+      research: {}
+      gw-research:
+        ipv4_address: 10.22.0.10
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=768m
+    shm_size: 256m
+    mem_limit: 2g
+    cpus: "2.0"
+    pids_limit: 512
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  hermes-research-home:
+
+networks:
+  research:
+    external: true
+  gw-research:
+    external: true

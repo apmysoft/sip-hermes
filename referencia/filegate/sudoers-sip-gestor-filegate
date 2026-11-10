@@ -1,0 +1,6 @@
+# sip-gestor-filegate — Fase 4: el Gestor de Entrada (usuario sip-gestor) solo
+# puede ejecutar el wrapper que fija socket + token y habla con filegate.
+# Privilegio mínimo: un único comando; sin shell, sin otros binarios como root.
+# La frontera de autorización real es el PEP (/etc/filegate/policy.conf).
+# Desplegar: /etc/sudoers.d/sip-gestor-filegate (root:root 0440), validar con visudo -cf.
+sip-gestor ALL=(root) NOPASSWD: /usr/local/bin/sip-gestor-filegate

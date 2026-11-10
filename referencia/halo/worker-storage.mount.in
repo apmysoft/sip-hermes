@@ -1,0 +1,13 @@
+# Instalar con el nombre calculado por systemd-escape para /srv/hermes-worker.
+[Unit]
+Description=SIP HALO worker bounded storage
+
+[Mount]
+What=/var/lib/sip-hermes-worker/worker.ext4
+Where=/srv/hermes-worker
+Type=ext4
+Options=loop,nodev,nosuid
+TimeoutSec=30
+
+[Install]
+WantedBy=multi-user.target

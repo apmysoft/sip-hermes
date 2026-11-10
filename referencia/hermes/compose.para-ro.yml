@@ -1,0 +1,19 @@
+# PARA en solo lectura para PERSONAL (v2.4, tabla F: `hermes-personal` lee PARA ro). Decisión del usuario 04-11.
+# Uso: docker compose -f docker-compose.yml -f compose.ssh-sandbox.yml -f compose.para-ro.yml up -d hermes-webui
+# Solo las cinco carpetas PARA, no todo ${PARA_ROOT}. El contenedor corre con el UID 1000 (usuario, que
+# puede escribir en PARA): la barrera de escritura es `read_only` del bind (EROFS), no los permisos.
+# Escrituras: siempre por filegate (staging/cuarentena). Vuelta atrás: el mismo `up -d` sin este fichero.
+services:
+  hermes-webui:
+    # 05-11: WebUI v0.52.544 + agente v0.22.7 (candidato-v0.22.7; incluye pdftotext/docx2txt).
+    # Vuelta atrás: restaurar la copia del volumen (la imagen 0.21.3 se borró el 09-11, decisión delegada).
+    image: hermes-webui-sip:v0.52.544-a0.22.7
+    pull_policy: never
+    volumes:
+      - {type: bind, source: ${PARA_ROOT}/00_entrada, target: /para/00_entrada, read_only: true}
+      - {type: bind, source: ${PARA_ROOT}/01_proyectos, target: /para/01_proyectos, read_only: true}
+      - {type: bind, source: ${PARA_ROOT}/02_areas, target: /para/02_areas, read_only: true}
+      - {type: bind, source: ${PARA_ROOT}/03_recursos, target: /para/03_recursos, read_only: true}
+      - {type: bind, source: ${PARA_ROOT}/04_archivo, target: /para/04_archivo, read_only: true}
+      # Índice de texto de PARA (sip-indice, 09-11), solo lectura: activa documentos_buscar_texto.
+      - {type: bind, source: /var/lib/sip-indice, target: /indice, read_only: true, bind: {create_host_path: false}}

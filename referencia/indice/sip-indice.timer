@@ -1,0 +1,9 @@
+[Unit]
+Description=SIP: índice de texto de PARA cada noche (00:30-01:55, sin OCR; el OCR lo hace sip-indice-ocr en HALO a las 02:00)
+
+[Timer]
+OnCalendar=*-*-* 00:30
+Persistent=false
+
+[Install]
+WantedBy=timers.target

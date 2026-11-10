@@ -1,0 +1,48 @@
+#!/usr/sbin/nft -f
+# CANDIDATO zona PERSONAL por Telegram (04-11). Respecto al vigente (CODING) solo añade el enlace
+# gw-personal (10.25.0.0/24, internal) a las dos reglas de descarte de enlaces y de entrada al host.
+# No abre nada.
+table inet sip-zones {
+    chain forward {
+        type filter hook forward priority -50; policy accept;
+        ct state established,related accept
+        # 05-11 (decisión del usuario: solo la tailnet usa los servicios): nada de la LAN entra a los puertos
+        # publicados por Docker (DNAT), salvo los de aMule (excepción WAN del router; hoy sin oyente en Neo).
+        iifname "enp0s31f6" ct status dnat ct original proto-dst { 4662, 4665, 4672 } accept
+        iifname "enp0s31f6" ct status dnat counter log prefix "sip-drop-lan-docker " drop
+        # sandbox: internal=true + doble candado
+        ip saddr 172.30.0.0/24 counter log prefix "sip-drop-sandbox " drop
+        # gateway: solo Telegram y DNS
+        ip saddr 10.21.0.0/24 meta l4proto { tcp, udp } th dport 53 accept
+        ip saddr 10.21.0.0/24 ip daddr { 91.105.192.0/23, 91.108.4.0/22, 91.108.8.0/22, 91.108.12.0/22, 91.108.16.0/22, 91.108.20.0/22, 91.108.56.0/22, 149.154.160.0/20, 185.76.151.0/24 } tcp dport 443 accept
+        ip saddr 10.21.0.0/24 counter log prefix "sip-drop-gateway " drop
+        # enlaces gateway-zona: el tráfico va dentro del bridge; nada se reenvía fuera
+        ip saddr { 10.22.0.0/24, 10.24.0.0/24, 10.25.0.0/24 } counter log prefix "sip-drop-gwlink " drop
+        # coding: solo SSH del worker y Ollama de HALO
+        ip saddr 10.23.0.0/24 ip daddr ${HALO_TAILNET_IP} tcp dport { 22, 11434 } accept
+        ip saddr 10.23.0.0/24 counter log prefix "sip-drop-coding " drop
+        # research: excepciones M.1 antes del cierre de RFC1918
+        ip saddr 10.20.0.10 ip daddr ${HALO_TAILNET_IP} tcp dport 11434 accept
+        ip saddr 10.20.0.0/24 ip daddr 10.20.0.10 tcp dport 4000 accept
+        # 06-11 (propuesta, pendiente del usuario): RESEARCH -> SearXNG local (sip-config/research/searxng)
+        ip saddr 10.20.0.0/24 ip daddr 10.20.0.20 tcp dport 8080 accept
+        ip saddr 10.20.0.0/24 ip daddr { 10.0.0.0/8, 172.16.0.0/12, ${LAN_SUBNET}/16, 100.64.0.0/10, 169.254.0.0/16, 127.0.0.0/8 } counter log prefix "sip-drop-research " drop
+        ip saddr 10.20.0.0/24 accept
+        # sip: solo tailnet (HALO Ollama/SSH) + DNS; LAN y resto de RFC1918 cerrados
+        ip saddr 172.29.0.0/24 ip daddr 100.64.0.0/10 accept
+        ip saddr 172.29.0.0/24 meta l4proto { tcp, udp } th dport 53 accept
+        # excepcion Bloque 4a: backend SSH del runner sandbox (Hermes -> runner:2222).
+        ip saddr 172.29.0.0/24 ip daddr 172.30.0.0/24 tcp dport 2222 counter accept
+        ip saddr 172.29.0.0/24 counter log prefix "sip-drop-sip " drop
+    }
+    chain input {
+        type filter hook input priority -50; policy accept;
+        ct state established,related accept
+        # 05-11: docker-proxy también escucha en [::]; sin IPv6 global, desde la LAN solo se llega por enlace
+        # local. Se corta TCP/UDP IPv6 de la LAN salvo DHCPv6 y mDNS (ICMPv6 intacto). IPv4 al host, sin cambios.
+        iifname "enp0s31f6" meta nfproto ipv6 udp dport { 546, 5353 } accept
+        iifname "enp0s31f6" meta nfproto ipv6 meta l4proto { tcp, udp } counter log prefix "sip-drop-lan6 " drop
+        # los contenedores de zona no necesitan hablar CON el host
+        ip saddr { 10.20.0.0/24, 10.21.0.0/24, 10.22.0.0/24, 10.23.0.0/24, 10.24.0.0/24, 10.25.0.0/24, 172.29.0.0/24, 172.30.0.0/24 } counter log prefix "sip-drop-in " drop
+    }
+}

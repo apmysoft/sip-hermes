@@ -1,0 +1,36 @@
+#!/bin/bash -p
+# Launcher del spike SSH, instalado root:root 0755. No concede sudo.
+set -euo pipefail
+umask 077
+
+if [[ $(/usr/bin/id -un) != hermes-worker ]]; then
+  echo 'Este launcher requiere el usuario hermes-worker' >&2
+  exit 126
+fi
+if [[ -z ${SSH_ORIGINAL_COMMAND:-} ]]; then
+  echo 'Se requiere un comando SSH; no se ofrece shell interactiva' >&2
+  exit 126
+fi
+
+# No permitir escrituras en el filesystem raíz si falla el almacenamiento acotado.
+if ! /usr/bin/mountpoint -q /srv/hermes-worker; then
+  echo 'Almacenamiento acotado del worker no montado; ejecución denegada' >&2
+  exit 126
+fi
+
+exec /usr/bin/timeout --signal=TERM --kill-after=5s 300s \
+  /usr/bin/bwrap \
+    --unshare-all --die-with-parent --cap-drop ALL --clearenv \
+    --ro-bind /usr /usr \
+    --symlink usr/lib /lib --symlink usr/lib64 /lib64 \
+    --symlink usr/bin /bin --symlink usr/sbin /sbin \
+    --proc /proc --dev /dev \
+    --bind /srv/hermes-worker/tmp /tmp \
+    --bind /srv/hermes-worker/home /var/lib/hermes-worker \
+    --bind /srv/hermes-worker/workspace /workspace \
+    --setenv HOME /var/lib/hermes-worker \
+    --setenv PATH /usr/bin:/bin \
+    --setenv USER hermes-worker --setenv LOGNAME hermes-worker \
+    --setenv LANG C.UTF-8 \
+    --chdir /workspace \
+    -- /usr/bin/bash --noprofile --norc -c "$SSH_ORIGINAL_COMMAND"

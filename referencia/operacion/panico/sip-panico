@@ -1,0 +1,82 @@
+#!/bin/sh
+# Modo pánico de SIP (v2.4 M.15), como root en Neo.
+#   sip-panico stop  [--simular]   para las zonas, LiteLLM, las escrituras de filegate y los automatismos
+#   sip-panico start [--simular]   restaura exactamente lo que había al parar
+#   sip-panico estado
+# Queda vivo: sip-gateway (solo para avisar), sip-notify, el resumen matutino, Docker, SSH, Tailscale y el
+# resto de stacks. Sobrevive a un reinicio: desactiva las unidades y quita la política de reinicio de los
+# contenedores; start lo devuelve todo según el fichero de estado.
+set -eu
+EST=/var/lib/sip-panico/estado
+OUTBOX=/var/lib/sip-notify/outbox
+# 05-11: + hermes-personal-api (API de PERSONAL para Telegram, desde el 04-11).
+CONTENEDORES="hermes-webui hermes-personal-api hermes-coding hermes-coding-api hermes-research hermes-sandbox-runner sip-litellm"
+# filegate.socket: sin escrituras en PARA (las zonas leen por ACL, no por filegate).
+# 05-11: + puente de stacks (reinicia/actualiza contenedores) y las dos unidades de arranque que hacen
+# `docker start` de zonas tras un reinicio (desharían el pánico aunque la política de reinicio sea "no").
+UNIDADES="filegate.socket sip-gestor-bridge.path sip-wol-halo.path sip-traspaso.timer sip-gestor-nocturno.timer
+sip-model-eval.timer sip-memory-review.timer filegate-ttl.timer sip-stacks-bridge.path
+sip-personal-api-after-para.service sip-after-tailscale.service"
+
+SIM=""; [ "${2:-}" = "--simular" ] && SIM=1
+run() { if [ -n "$SIM" ]; then echo "[simular] $*"; else "$@"; fi; }
+runq() { if [ -n "$SIM" ]; then echo "[simular] $*"; else "$@" >/dev/null; fi; }
+avisar() {
+    [ -n "$SIM" ] && { echo "[simular] aviso: $1"; return; }
+    f="panico-$(date +%Y%m%d-%H%M%S).txt"
+    printf '%s\n' "$1" > "$OUTBOX/.$f" && mv "$OUTBOX/.$f" "$OUTBOX/$f" || true
+}
+
+parar() {
+    [ -e "$EST" ] && { echo "ya en modo pánico desde $(stat -c %y "$EST" | cut -c1-19); nada que hacer"; exit 0; }
+    tmp=$(mktemp)
+    for c in $CONTENEDORES; do
+        if [ "$(docker inspect -f '{{.State.Running}}' "$c" 2>/dev/null)" = true ]; then
+            echo "contenedor $c $(docker inspect -f '{{.HostConfig.RestartPolicy.Name}}' "$c")" >> "$tmp"
+        fi
+    done
+    for u in $UNIDADES; do
+        echo "unidad $u $(systemctl is-enabled "$u" 2>/dev/null || true) $(systemctl is-active "$u" 2>/dev/null || true)" >> "$tmp"
+    done
+    if [ -n "$SIM" ]; then echo "[simular] estado que se guardaría:"; cat "$tmp"; else
+        install -d -m 0700 "$(dirname "$EST")"; mv "$tmp" "$EST"; chmod 0600 "$EST"; fi
+    src=${SIM:+$tmp}; src=${src:-$EST}
+    # Primero lo que actúa solo; después las zonas.
+    awk '$1=="unidad"{print $2}' "$src" | while read -r u; do run systemctl disable --now "$u"; done
+    awk '$1=="contenedor"{print $2}' "$src" | while read -r c; do
+        runq docker update --restart=no "$c"; runq docker stop -t 20 "$c"; done
+    [ -n "$SIM" ] && rm -f "$tmp"
+    avisar "SIP en MODO PÁNICO ($(date '+%d-%m %H:%M')): zonas, LiteLLM, escrituras de filegate y automatismos parados. Para volver: sip-panico start (root en Neo)."
+    estado
+}
+
+arrancar() {
+    [ -e "$EST" ] || { echo "no hay modo pánico activo"; exit 0; }
+    awk '$1=="contenedor"{print $2, $3}' "$EST" | while read -r c p; do
+        runq docker update --restart="$p" "$c"; runq docker start "$c"; done
+    awk '$1=="unidad"{print $2, $3, $4}' "$EST" | while read -r u en ac; do
+        [ "$en" = enabled ] && run systemctl enable "$u"
+        [ "$ac" = active ] && { run systemctl start "$u" || echo "AVISO: no arrancó $u; revisar" >&2; }
+        true
+    done
+    if [ -z "$SIM" ]; then mv "$EST" "$EST.restaurado-$(date +%Y%m%d-%H%M%S)"; fi
+    avisar "SIP fuera del modo pánico ($(date '+%d-%m %H:%M')): restaurado lo que había al parar."
+    estado
+}
+
+estado() {
+    [ -e "$EST" ] && echo "MODO PÁNICO ACTIVO desde $(stat -c %y "$EST" | cut -c1-19)" || echo "modo normal"
+    for c in $CONTENEDORES sip-gateway; do
+        printf '  %-22s %s\n' "$c" "$(docker inspect -f '{{.State.Status}} (restart={{.HostConfig.RestartPolicy.Name}})' "$c" 2>/dev/null || echo ausente)"
+    done
+    for u in $UNIDADES sip-notify.path; do
+        printf '  %-28s %s %s\n' "$u" "$(systemctl is-enabled "$u" 2>/dev/null || true)" "$(systemctl is-active "$u" 2>/dev/null || true)"
+    done
+}
+
+case "${1:-}" in
+    stop) parar ;;
+    start) arrancar ;;
+    estado) estado ;;
+    *) echo "uso: sip-panico stop|start [--simular] | estado" >&2; exit 2 ;;
+esac

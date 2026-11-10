@@ -1,0 +1,17 @@
+[Unit]
+Description=SIP: resumen matutino (datos del sistema + titular del tiny de Neo)
+After=docker.service llama-swap.service
+
+[Service]
+Type=oneshot
+# Root para consultar systemd, Docker, el estado del gestor y los volumenes de las zonas (solo lectura).
+ExecStart=/usr/local/sbin/sip-morning.py
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadOnlyPaths=${DOCKER_DATA}/docker_root/volumes /var/lib/sip-gestor-entrada
+ReadWritePaths=/var/lib/sip-notify/outbox
+# Red: solo el tiny (localhost) y la sonda de HALO por tailnet.
+IPAddressDeny=any
+IPAddressAllow=localhost ${HALO_TAILNET_IP}/32

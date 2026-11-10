@@ -1,0 +1,133 @@
+# SIP Fase 6 — LiteLLM proxy + Postgres dedicado (sin cloud todavía)
+#
+# Diseño conforme a ARQUITECTURA_DEFINITIVA_SIP_HERMES_v2.4.md:
+#   - Claves/provider: SIEMPRE por config.yaml + env, nunca Admin UI
+#     (DISABLE_ADMIN_UI=true; la DB solo contiene metadatos de gasto).
+#   - Rate-limits/budgets por clave virtual requieren la DB (Postgres).
+#   - Exposición SOLO tailnet (misma política que la WebUI de Hermes).
+#   - Volumen de la DB en ${DOCKER_DATA} (data-root de Docker); config en NVMe.
+#
+# Despliegue (Neo):
+#   1) Copiar a /opt/sip-litellm/: docker-compose.yml + litellm.config.yaml
+#   2) Env solo servidor: /root/sip-litellm.env (0600, ver README)
+#   3) docker compose up -d ; verificación en README
+#
+# Rollback: docker compose down -v NO (borra la DB); usar `docker compose down`
+# y, si tocó config previa, el backup de /root/sip-agent-backups/<fecha>/fase6/.
+
+name: sip-litellm
+
+services:
+  litellm-db:
+    # postgres:16-alpine, digest fijado el 30-10-2026
+    image: postgres@sha256:0cefaabd882e42bcb2a2f3dc56d3ce4770560ba62fd7f197f1a2e008fd5731ab
+    container_name: sip-litellm-db
+    restart: unless-stopped
+    # Logs de Docker acotados (M.12, 03-11): 10m x 5 por contenedor.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    environment:
+      - POSTGRES_DB=litellm
+      - POSTGRES_USER=litellm
+    env_file:
+      - /root/sip-litellm.env
+    # Recursos pequeños a propósito (carga mínima; v2.4: shared_buffers bajo)
+    command:
+      - -c
+      - shared_buffers=64MB
+      - -c
+      - max_connections=20
+      - -c
+      - work_mem=8MB
+      - -c
+      - effective_cache_size=256MB
+    volumes:
+      - ${DOCKER_DATA}/docker_root/volumes/sip-litellm/db:/var/lib/postgresql/data
+    networks:
+      - litellm-internal
+    mem_limit: 384m
+    cpus: "0.5"
+    cap_drop:
+      - ALL
+    # postgres official necesita: chown al arrancar (PGDATA del volume) y
+    # setuid/setgid para pasar al user postgres. Sin ellas el entrypoint
+    # falla con "chown: Operation not permitted".
+    cap_add:
+      - CHOWN
+      - FOWNER
+      - SETUID
+      - SETGID
+      - DAC_READ_SEARCH
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U litellm -d litellm"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  litellm:
+    # v1.106.7 (firmada con cosign por BerriAI), fijada el 05-11-2026; antes main-stable 1.106.6 (30-10)
+    image: ghcr.io/berriai/litellm:v1.106.7@sha256:be24d7da11f4063ca23fbff6689bac5ded14fe4fc645e07f36588636969f1c27
+    container_name: sip-litellm
+    restart: unless-stopped
+    # Logs de Docker acotados (M.12, 03-11): 10m x 5 por contenedor.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    command:
+      - --config
+      - /opt/sip/litellm.config.yaml
+      - --host
+      - 0.0.0.0
+      - --port
+      - "4000"
+    environment:
+      - DISABLE_ADMIN_UI=true
+    env_file:
+      - /root/sip-litellm.env
+    volumes:
+      - /opt/sip-litellm/litellm.config.yaml:/opt/sip/litellm.config.yaml:ro
+    # Solo tailnet (${NEO_TAILNET_IP} es la interfaz de tailnet de Neo)
+    ports:
+      - "${NEO_TAILNET_IP}:4000:4000"
+    # Sale a Internet y a HALO por research. Fuera de `sip` desde el 03-11 (O7): PERSONAL no usa el proxy.
+    networks:
+      litellm-internal: {}
+      research:
+        ipv4_address: 10.20.0.10
+        gw_priority: 1
+      # Zona CODING (Fase 7): hermes-coding llega aquí dentro del bridge, sin salir de su red.
+      coding:
+        ipv4_address: 10.23.0.10
+    mem_limit: 1g
+    cpus: "1.0"
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      litellm-db:
+        condition: service_healthy
+    healthcheck:
+      # la imagen LiteLLM no trae curl: usa el venv propio del contenedor
+      test: ["CMD-SHELL", "/app/.venv/bin/python3 -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:4000/health/liveliness', timeout=4)\""]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+networks:
+  research:
+    external: true
+  coding:
+    external: true
+  litellm-internal:
+    internal: true

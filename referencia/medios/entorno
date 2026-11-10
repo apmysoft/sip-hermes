@@ -1,0 +1,5 @@
+# Entorno de las herramientas de medios de HALO (06-11): . /opt/sip-medios/entorno
+export PATH=/opt/sip-medios/bin:/opt/sip-medios/venv/bin:/opt/sip-medios/npm/node_modules/.bin:$PATH
+export HF_HOME=/opt/sip-medios/modelos/hf U2NET_HOME=/opt/sip-medios/modelos/u2net TORCH_HOME=/opt/sip-medios/modelos/torch
+export PUPPETEER_CACHE_DIR=/opt/sip-medios/npm/.puppeteer
+export HF_HUB_OFFLINE=1

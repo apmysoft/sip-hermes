@@ -1,0 +1,27 @@
+# SearXNG para RESEARCH (06-11, PROPUESTA-HERRAMIENTAS §2.1). Red `research` (sale a internet como la zona),
+# IP fija 10.20.0.20, SIN puertos publicados. hermes-research solo llegará a él cuando se aplique la excepción
+# de nftables preparada en apply-conexion.sh (decisión del usuario, regla 6).
+services:
+  sip-searxng:
+    image: searxng/searxng@sha256:ffad724acd87b8dd312328d18da88ddd42e5c4b1d23231594662620053c13cae
+    container_name: sip-searxng
+    restart: unless-stopped
+    env_file: /root/sip-searxng.env   # SEARXNG_SECRET (0600 root; ROTACION.md)
+    volumes:
+      - ./settings.yml:/etc/searxng/settings.yml:ro
+    tmpfs:
+      - /var/cache/searxng:size=64m
+    networks:
+      research:
+        ipv4_address: 10.20.0.20
+    cap_drop: [ALL]
+    cap_add: [CHOWN, SETGID, SETUID]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 512m
+    pids_limit: 256
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+networks:
+  research:
+    external: true

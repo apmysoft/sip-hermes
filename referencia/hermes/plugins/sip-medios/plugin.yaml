@@ -1,0 +1,4 @@
+name: sip-medios
+version: 1.0.0
+description: "Audio, vídeo, imagen y documentos con las herramientas de HALO (sip-medios por llama-swap); resultados en /workspace/medios."
+author: SIP

@@ -1,0 +1,9 @@
+[Unit]
+Description=SIP: vigila la bandeja de avisos a Telegram
+
+[Path]
+DirectoryNotEmpty=/var/lib/sip-notify/outbox
+Unit=sip-notify.service
+
+[Install]
+WantedBy=paths.target

@@ -1,0 +1,125 @@
+# llama-swap en HALO (05-11): sustituye a Ollama en el mismo sitio (${HALO_TAILNET_IP}:11434, tailnet).
+# Binarios, pins y medidas: README.md de este directorio. Modelos: modelos.sh (sha256 verificado).
+# - Mismos nombres que en Ollama (los usan LiteLLM y las configs de Hermes): ids y aliases.
+# - Backend Vulkan (RADV): con MTP genera 77 t/s frente a 61 de ROCm y 54-67 de Ollama; ROCm procesa el
+#   prompt un 20 % más rápido. Para cambiar: macro `srv` -> llama-b12110-rocm.
+# - Un modelo de GPU a la vez (grupo gpu, como OLLAMA_MAX_LOADED_MODELS=1). Los embeddings van en CPU
+#   en su propio grupo, para no expulsar al modelo principal.
+# - Caché KV q8_0 y flash attention, como OLLAMA_KV_CACHE_TYPE / OLLAMA_FLASH_ATTENTION. ttl 600 = keep_alive 10m.
+# - Sin apiKeys, como Ollama: el acceso lo limitan la ACL de Tailscale y nftables de cada zona.
+# - Planificador de GPU (05-11, sip-config/gpu-halo/): ComfyUI y Whisper-GPU son miembros del grupo gpu. No los
+#   ejecuta llama-swap: arranca y para sus unidades (polkit, solo esas dos), que conservan usuario y límites.
+
+healthCheckTimeout: 300
+logLevel: info
+startPort: 10001
+globalTTL: 600
+sendLoadingState: false
+includeAliasesInList: true
+
+macros:
+  "srv": >-
+    /var/lib/sip-llm/llama-b12110-vulkan/llama-server --host 127.0.0.1 --port ${PORT}
+    -np 1 -fa on -ctk q8_0 -ctv q8_0 --jinja --no-webui --cache-ram 4096
+  "m": "/var/lib/sip-llm/models"
+
+models:
+  # Principal de PERSONAL y CODING. En Ollama eran dos (27b, temp 1; 27b-64k, temp 0.6 y 64K): uno solo con
+  # 64K y temp 0.6 evita una recarga al alternar (decisión 05-11; las peticiones pueden fijar su temperatura).
+  # 06-11: probado a 96K (cabe: 23,6 GB de 25,8) y revertido por decisión del usuario: con 80K acumulados genera
+  # a 34 t/s. Se queda en 64K (ver README).
+  "qwen3.8:27b":
+    aliases: ["qwen3.8:27b-64k"]
+    cmd: >-
+      ${srv} -m ${m}/qwen3.8-27b-Q4_K_M.gguf --mmproj ${m}/mmproj-qwen3.8-27b.gguf -ngl 99 -c 65536
+      --spec-type draft-mtp --spec-draft-n-max 4
+      --temp 0.6 --top-k 20 --top-p 0.95 --min-p 0 --presence-penalty 0 --repeat-penalty 1
+  # Redactor sin censura (06-11, automatizaciones-locales; elección del usuario): Qwen3.8 27B con abliteración
+  # Heretic/ARA (KL 0,0085 frente al original, 0-1 rechazos de 100), calibrado multilingüe, cabeza MTP oficial.
+  # Solo texto, 32K. Lo llaman directamente los flujos A y B (sin LiteLLM: nada puede acabar en la nube).
+  "qwen3.8-heretic:27b":
+    cmd: >-
+      ${srv} -m ${m}/RVN-Q4_K_M-multilingual-mtp.gguf -ngl 99 -c 32768
+      --spec-type draft-mtp --spec-draft-n-max 3
+      --temp 0.7 --top-k 20 --top-p 0.8 --min-p 0 --presence-penalty 0 --repeat-penalty 1
+  "qwen3.6:27b":
+    cmd: >-
+      ${srv} -m ${m}/qwen3.6-27b-Q4_K_M.gguf --mmproj ${m}/mmproj-qwen3.6-27b.gguf -ngl 99 -c 65536
+      --spec-type draft-mtp --spec-draft-n-max 3
+      --temp 1 --top-k 20 --top-p 0.95 --min-p 0 --presence-penalty 0 --repeat-penalty 1
+  "qwen3-coder:30b":
+    cmd: >-
+      ${srv} -m ${m}/qwen3-coder-30b-a3b-Q4_K_M.gguf -ngl 99 -c 65536
+      --temp 0.7 --top-k 20 --top-p 0.8 --repeat-penalty 1.05
+  # Ollama lo tenía en su formato propio (`gptoss`), que llama.cpp no carga: GGUF oficial de ggml-org.
+  # Sin borrador: con EAGLE3 (ggml-org) aceptaba el 15 % y bajaba de 197 a 111 t/s (medido 05-11).
+  "gpt-oss:20b":
+    cmd: >-
+      ${srv} -m ${m}/gpt-oss-20b-MXFP4.gguf -ngl 99 -c 65536 --temp 1
+  # Candidato (CANDIDATOS.md): con --jinja usa la plantilla original del GGUF.
+  "muse-glimmer:30b":
+    aliases: ["hf.co/bartowski/Muse-Glimmer-30B-GGUF:Q4_K_M"]
+    cmd: >-
+      ${srv} -m ${m}/muse-glimmer-30b-Q4_K_M.gguf --mmproj ${m}/mmproj-muse-glimmer-30b.gguf -ngl 99 -c 32768
+  # Visión (facturas y documentos escaneados).
+  "qwen3-vl:8b":
+    cmd: >-
+      ${srv} -m ${m}/qwen3-vl-8b-Q4_K_M.gguf --mmproj ${m}/mmproj-qwen3-vl-8b.gguf -ngl 99 -c 32768
+      --temp 1 --top-k 20 --top-p 0.95
+  # Ollama lo tenía en su formato propio (`qwen3vlmoe`): GGUF oficial de Qwen.
+  "qwen3-vl:30b":
+    cmd: >-
+      ${srv} -m ${m}/Qwen3VL-30B-A3B-Instruct-Q4_K_M.gguf --mmproj ${m}/mmproj-Qwen3VL-30B-A3B-Instruct-F16.gguf
+      -ngl 99 -c 32768 --temp 1 --top-k 20 --top-p 0.95
+  # Embeddings en CPU (pequeños; conviven con el modelo de GPU).
+  "bge-m3":
+    aliases: ["bge-m3:latest"]
+    cmd: ${srv} -m ${m}/bge-m3-F16.gguf --device none --no-op-offload -ngl 0 -c 8192 --embeddings
+  "qwen3-embedding:0.6b":
+    cmd: ${srv} -m ${m}/qwen3-embedding-0.6b-Q8_0.gguf --device none --no-op-offload -ngl 0 -c 8192 --embeddings
+  # Servidores de GPU que no son de texto (no salen en /v1/models). Uno a la vez con el modelo de texto.
+  # Whisper en GPU: audios largos (sip-transcribir), por :11434/upstream/whisper-gpu/inference. 70x tiempo real.
+  "whisper-gpu":
+    unlisted: true
+    proxy: http://127.0.0.1:8179
+    checkEndpoint: /
+    cmd: /usr/local/lib/sip-gpu/sip-gpu-unidad sip-whisper-gpu.service
+    cmdStop: /bin/systemctl stop sip-whisper-gpu.service
+    ttl: 120
+  # ComfyUI por :11434/comfyui/ (id reservado de llama-swap: su websocket no retiene la GPU).
+  "comfyui_auto":
+    unlisted: true
+    proxy: http://127.0.0.1:8188
+    checkEndpoint: /
+    cmd: /usr/local/lib/sip-gpu/sip-gpu-unidad sip-comfyui.service
+    cmdStop: /bin/systemctl stop sip-comfyui.service
+    unloadTimeout: 30
+    ttl: 600
+  # sip-medios (06-11): herramientas de CPU (audio, vídeo, imagen, documentos) por :11434/upstream/medios/.
+  # Grupo propio de CPU: no echa al modelo de texto ni lo echa a él.
+  "medios":
+    unlisted: true
+    proxy: http://127.0.0.1:8190
+    checkEndpoint: /
+    cmd: /usr/local/lib/sip-gpu/sip-gpu-unidad sip-medios.service
+    cmdStop: /bin/systemctl stop sip-medios.service
+    ttl: 900
+
+routing:
+  router:
+    use: group
+    settings:
+      groups:
+        "gpu":
+          swap: true
+          exclusive: false
+          members: ["qwen3.8:27b", "qwen3.8-heretic:27b", "qwen3.6:27b", "qwen3-coder:30b", "gpt-oss:20b", "muse-glimmer:30b",
+                    "qwen3-vl:8b", "qwen3-vl:30b", "whisper-gpu", "comfyui_auto"]
+        "embeddings":
+          swap: false
+          exclusive: false
+          members: ["bge-m3", "qwen3-embedding:0.6b"]
+        "cpu":
+          swap: false
+          exclusive: false
+          members: ["medios"]

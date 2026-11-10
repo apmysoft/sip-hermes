@@ -1,0 +1,13 @@
+// Planificador de GPU de HALO (05-11; sip-medios 06-11): llama-swap (usuario sip-llm) arranca y para SOLO estas unidades,
+// que siguen con su propio usuario, límites y hardening. Nada más: sin otras unidades ni otros verbos.
+polkit.addRule(function(action, subject) {
+    if (action.id == "org.freedesktop.systemd1.manage-units" && subject.user == "sip-llm") {
+        var unidad = action.lookup("unit");
+        var verbo = action.lookup("verb");
+        if ((unidad == "sip-comfyui.service" || unidad == "sip-whisper-gpu.service" ||
+             unidad == "sip-medios.service") &&
+            (verbo == "start" || verbo == "stop")) {
+            return polkit.Result.YES;
+        }
+    }
+});

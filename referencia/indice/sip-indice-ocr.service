@@ -1,0 +1,29 @@
+[Unit]
+Description=SIP: OCR del índice de PARA en HALO (02:00-06:00; despierta HALO por WOL)
+ConditionPathIsMountPoint=${PARA_ROOT}
+
+[Service]
+Type=oneshot
+User=sip-indice
+Group=sip-indice
+UMask=0027
+ExecStart=/usr/local/sbin/sip-indice-ocr.py --hasta 05:50
+# Tope duro: la ventana del usuario acaba a las 06:00 (arranca a las 02:00). En oneshot, RuntimeMaxSec no tiene efecto
+# (lo avisa systemd): el tope es TimeoutStartSec (10-11).
+TimeoutStartSec=4h
+Nice=10
+MemoryMax=1G
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/sip-indice /var/lib/sip-indice-wol/requests
+ReadOnlyPaths=/var/lib/sip-indice-wol/results
+# Solo HALO (sip-medios por llama-swap); nada más.
+RestrictAddressFamilies=AF_INET AF_UNIX
+IPAddressDeny=any
+IPAddressAllow=${HALO_TAILNET_IP}
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+CapabilityBoundingSet=

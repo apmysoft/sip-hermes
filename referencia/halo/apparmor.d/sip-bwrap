@@ -1,0 +1,9 @@
+# Excepción userns para Bubblewrap en HALO (Ubuntu 24.04).
+# Alcance: /usr/bin/bwrap para cualquier usuario, no solo Hermes.
+# Este perfil no confina archivos/red: el launcher del worker debe hacerlo.
+abi <abi/4.0>,
+include <tunables/global>
+
+profile sip-bwrap /usr/bin/bwrap flags=(unconfined) {
+  userns,
+}

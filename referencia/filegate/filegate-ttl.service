@@ -1,0 +1,12 @@
+[Unit]
+Description=Purge con retencion de staging y cuarentena de filegate
+# Alternativa a tmpfiles: ${STAGING_ROOT} tiene transicion de propietario
+# usuario->filegate que systemd-tmpfiles rechaza (unsafe path transition).
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/filegate-ttl.sh
+# Hardening basico: solo lectura salvo las purgas; sin privilegios extra.
+ProtectSystem=strict
+ReadWritePaths=${STAGING_ROOT}/_staging ${STAGING_ROOT}/_cuarentena
+NoNewPrivileges=true

@@ -1,0 +1,11 @@
+[Unit]
+Description=Reaplica la excepcion DOCKER-USER del SSH runner sandbox (regla iptables runtime)
+After=docker.service
+Wants=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/sip-docker-user-ssh.sh
+
+[Install]
+WantedBy=multi-user.target

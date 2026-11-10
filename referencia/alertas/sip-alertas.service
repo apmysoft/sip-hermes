@@ -1,0 +1,16 @@
+[Unit]
+Description=SIP: alertas de operación (disco, RAM, egresos, cuarentena, WOL, cuota, logins; M.12)
+After=docker.service
+
+[Service]
+Type=oneshot
+# Root para leer el journal del kernel, Docker y el estado del WOL (solo lectura).
+ExecStart=/usr/bin/python3 -I /usr/local/sbin/sip-alertas.py
+StateDirectory=sip-alertas
+StateDirectoryMode=0700
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/sip-notify/outbox
+IPAddressDeny=any

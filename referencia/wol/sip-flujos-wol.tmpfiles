@@ -1,0 +1,2 @@
+# /etc/tmpfiles.d/sip-flujos-wol.conf (06-11): respuestas de sip-wol-flujos, borradas al día
+e /var/lib/sip-flujos/wol/results - - - 1d

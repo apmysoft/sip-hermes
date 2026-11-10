@@ -1,0 +1,7 @@
+# Tercera candidata: adaptadores con despacho de identidad por destino
+# (HALO vs runner sandbox). Deriva de la candidata ssh-client ya desplegada;
+# no cambia Compose ni versiones del agente/WebUI.
+FROM hermes-webui-sip:ssh-client-test
+USER root
+COPY ssh-client/ /opt/sip-ssh-client/bin/
+RUN chmod 0755 /opt/sip-ssh-client/bin/ssh /opt/sip-ssh-client/bin/scp

@@ -1,0 +1,20 @@
+[Unit]
+Description=SIP: reenvío de PERSONAL al tiny de Neo (llama-swap 127.0.0.1:11434)
+Requires=sip-tiny-personal.socket
+After=sip-tiny-personal.socket llama-swap.service
+
+[Service]
+ExecStart=/usr/lib/systemd/systemd-socket-proxyd --exit-idle-time=10min 127.0.0.1:11434
+DynamicUser=yes
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_UNIX
+CapabilityBoundingSet=
+IPAddressAllow=localhost 172.29.0.200 172.29.0.201
+IPAddressDeny=any

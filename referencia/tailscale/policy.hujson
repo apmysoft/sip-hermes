@@ -1,0 +1,33 @@
+{
+	"tagOwners": {
+		"tag:sip":  ["usuario@example.org"],
+		"tag:halo": ["usuario@example.org"],
+		"tag:usuario": ["usuario@example.org"],
+		"tag:work": ["usuario@example.org"],
+	},
+	"acls": [
+		// 04-11: Dockge (5001, login = root en Neo) excluido de toda la tailnet; solo localhost en Neo.
+		{"action": "accept", "src": ["tag:usuario"], "dst": ["tag:sip:1-5000,5002-65535"]},
+		{
+			"action": "accept",
+			"src":    ["tag:usuario"],
+			"dst":    ["tag:halo:22,11434,3389"],
+		},
+		{"action": "accept", "src": ["tag:sip"], "dst": ["tag:sip:*"]},
+		// 05-11 (aplicado por el usuario): 8178 = sip-whisper (transcripción de PERSONAL).
+		{"action": "accept", "src": ["tag:sip"], "dst": ["tag:halo:22,11434,8178"]},
+		// 04-11: HALO a todos los puertos de Neo salvo Dockge (decisión del usuario; el worker no tiene red).
+		{"action": "accept", "src": ["tag:halo"], "dst": ["tag:sip:1-5000,5002-65535"]},
+		// 04-11: tag:work (PC del trabajo) sin acceso a HALO (antes 22 y 3389); decisión del usuario.
+		{"action": "accept", "src": ["usuario@example.org"], "dst": ["tag:sip:1-5000,5002-65535"]},
+	],
+	"nodeAttrs": [
+		{
+			// Funnel policy, which lets tailnet members control Funnel
+			// for their own devices.
+			// Learn more at https://tailscale.com/docs/features/tailscale-funnel
+			"target": ["autogroup:member"],
+			"attr":   ["funnel"],
+		},
+	],
+}

@@ -1,0 +1,18 @@
+# Configuración de llama-swap — tiny GPU en Neo (Fase 4 SIP)
+# Binarios y modelo: ver README.md de este directorio (pins + sha256).
+# Escucha solo loopback. Consumidores: gestor de entrada y resumen (host) y, desde el 06-11, PERSONAL como
+# respaldo (v2.4 §H.3) a través de sip-tiny-personal.socket (172.29.0.1:11435). 64K desde el 09-11 (Hermes exige 64K
+# para compactar conversaciones; decisión del usuario: con el tiny cargado no se usa la GPU para Jellyfin/Immich). Antes 32K: un turno de PERSONAL
+# ocupa 6,5-25K tokens; KV q8 + flash-attention = 7,7 GB de VRAM a 64K (5,1 a 32K) (GTX 1070, compartida con Immich).
+# Abrir a tailnet = cambio explícito a decidir cuando exista un consumidor remoto (Fase 5).
+
+# Puerto de los llama-server hijos. Sin esto llama-swap empieza en 5800, que ocupa JDownloader
+# (127.0.0.1:5800) desde el 04-11: el tiny moría al arrancar (06-11). Mismo valor que en HALO.
+startPort: 10001
+
+models:
+  "qwen3-4b-instruct":
+    cmd: /var/lib/sip-llm/llama-b11935/llama-server --model /var/lib/sip-llm/models/Qwen3-4B-Instruct-2507-Q4_K_M.gguf --port ${PORT} --host 127.0.0.1 -c 65536 -ngl 99 --jinja -fa on -ctk q8_0 -ctv q8_0 -np 1
+    env:
+      - "LD_LIBRARY_PATH=/var/lib/sip-llm/cudart"
+    ttl: 600

@@ -1,0 +1,12 @@
+[Unit]
+Description=SIP zones firewall (Fase 1B)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c '/usr/sbin/nft delete table inet sip-zones 2>/dev/null; /usr/sbin/nft -f /etc/nftables-sip.nft'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

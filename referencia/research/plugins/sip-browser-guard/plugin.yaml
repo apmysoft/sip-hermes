@@ -1,0 +1,6 @@
+name: sip-browser-guard
+version: 1.0.0
+description: "Bloquea en el navegador cualquier esquema distinto de http y https."
+author: SIP
+hooks:
+  - pre_tool_call

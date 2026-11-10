@@ -1,0 +1,29 @@
+#!/usr/sbin/nft -f
+# CANDIDATO Fase 6 — NO APLICADO. Sustituiría a sip-config/filegate/nftables-sip.nft.
+# Respecto al vigente solo añade la red research (10.20.0.0/24); las reglas de
+# sip y sandbox no cambian. LiteLLM (.10) y el browser quedan con IP fija en compose.
+table inet sip-zones {
+    chain forward {
+        type filter hook forward priority -50; policy accept;
+        ct state established,related accept
+        # sandbox: internal=true + doble candado
+        ip saddr 172.30.0.0/24 counter log prefix "sip-drop-sandbox " drop
+        # research: excepciones M.1 antes del cierre de RFC1918
+        ip saddr 10.20.0.10 ip daddr ${HALO_TAILNET_IP} tcp dport 11434 accept
+        ip saddr 10.20.0.0/24 ip daddr 10.20.0.10 tcp dport 4000 accept
+        ip saddr 10.20.0.0/24 ip daddr { 10.0.0.0/8, 172.16.0.0/12, ${LAN_SUBNET}/16, 100.64.0.0/10, 169.254.0.0/16, 127.0.0.0/8 } counter log prefix "sip-drop-research " drop
+        ip saddr 10.20.0.0/24 accept
+        # sip: solo tailnet (HALO Ollama/SSH) + DNS; LAN y resto de RFC1918 cerrados
+        ip saddr 172.29.0.0/24 ip daddr 100.64.0.0/10 accept
+        ip saddr 172.29.0.0/24 meta l4proto { tcp, udp } th dport 53 accept
+        # excepcion Bloque 4a: backend SSH del runner sandbox (Hermes -> runner:2222).
+        ip saddr 172.29.0.0/24 ip daddr 172.30.0.0/24 tcp dport 2222 counter accept
+        ip saddr 172.29.0.0/24 counter log prefix "sip-drop-sip " drop
+    }
+    chain input {
+        type filter hook input priority -50; policy accept;
+        ct state established,related accept
+        # los contenedores de zona no necesitan hablar CON el host
+        ip saddr { 10.20.0.0/24, 172.29.0.0/24, 172.30.0.0/24 } counter log prefix "sip-drop-in " drop
+    }
+}

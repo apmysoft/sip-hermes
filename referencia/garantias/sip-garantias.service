@@ -1,0 +1,27 @@
+[Unit]
+Description=SIP: garantías de PARA (huellas, integridad, duplicados; solo lectura)
+ConditionPathIsMountPoint=${PARA_ROOT}
+
+[Service]
+Type=oneshot
+User=sip-indice
+Group=sip-indice
+SupplementaryGroups=hermes-ro sip-notify
+UMask=0027
+ExecStart=/usr/local/sbin/sip-garantias.py --max-gb 150 --max-minutos 210
+Nice=19
+IOSchedulingClass=idle
+CPUQuota=200%
+MemoryMax=2G
+TimeoutStartSec=4h
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateNetwork=yes
+ReadWritePaths=/var/lib/sip-garantias /var/lib/sip-notify/outbox
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX
+CapabilityBoundingSet=

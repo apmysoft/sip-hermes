@@ -1,0 +1,8 @@
+# Usar junto a docker-compose.yml; no selecciona el backend SSH en config.yaml.
+# Candidata local verificada: sha256:cd0cb3c349d19ebc8e0bceae1c5b22885dfae29120b02e61879109ac422dc33a.
+# Volver a compose.sqlite.yml para recuperar la imagen SQLite anterior.
+# Cambiar imagen no restaura datos/config automáticamente.
+services:
+  hermes-webui:
+    image: hermes-webui-sip:ssh-client-test
+    pull_policy: never

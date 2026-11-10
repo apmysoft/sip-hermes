@@ -1,0 +1,29 @@
+#!/usr/sbin/nft -f
+# ============================================================================
+# nftables — Fase 1B: zonas Docker SIP (sip 172.29 / sandbox 172.30)
+# NO toca el stack domestico (docker0, bridges *arr, cups, navidrome...).
+# Paradoja RFC1918 (M.1): drop SELECTIVO por subred Docker, nunca absoluto.
+# aMule (WAN 4662/tcp + 4665,4672/udp) vive en el HOST: inalterado aqui.
+# Prioridad -50: corre antes de las cadenas DOCKER de docker-proxy/iptables-nft.
+# ============================================================================
+table inet sip-zones {
+    chain forward {
+        type filter hook forward priority -50; policy accept;
+        ct state established,related accept
+        # sandbox: internal=true + doble candado
+        ip saddr 172.30.0.0/24 counter log prefix "sip-drop-sandbox " drop
+        # sip: solo tailnet (HALO Ollama/SSH) + DNS; LAN y resto de RFC1918 cerrados
+        ip saddr 172.29.0.0/24 ip daddr 100.64.0.0/10 accept
+        ip saddr 172.29.0.0/24 meta l4proto { tcp, udp } th dport 53 accept
+        # excepcion Bloque 4a: backend SSH del runner sandbox (Hermes -> runner:2222).
+        # El runner sigue sin poder iniciar nada (drop de origen 172.30 mas arriba).
+        ip saddr 172.29.0.0/24 ip daddr 172.30.0.0/24 tcp dport 2222 counter accept
+        ip saddr 172.29.0.0/24 counter log prefix "sip-drop-sip " drop
+    }
+    chain input {
+        type filter hook input priority -50; policy accept;
+        ct state established,related accept
+        # los contenedores de zona no necesitan hablar CON el host
+        ip saddr { 172.29.0.0/24, 172.30.0.0/24 } counter log prefix "sip-drop-in " drop
+    }
+}

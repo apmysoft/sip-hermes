@@ -1,0 +1,9 @@
+[Unit]
+Description=SIP: notas de voz de Telegram pendientes de transcribir
+
+[Path]
+DirectoryNotEmpty=/var/lib/sip-voz/requests
+MakeDirectory=no
+
+[Install]
+WantedBy=paths.target

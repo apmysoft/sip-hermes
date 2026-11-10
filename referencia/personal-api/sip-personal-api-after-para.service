@@ -1,0 +1,18 @@
+# Arranca hermes-personal-api cuando ${PARA_ROOT} está montado (04-11).
+# El montaje lleva nofail: no queda ordenado antes de Docker, que puede intentar arrancar el contenedor
+# antes de que existan las carpetas de origen de PARA; ese arranque falla (fallo seguro: no monta vacío)
+# y Docker no reintenta. Esta unidad espera al montaje y lo arranca. Si ya está en marcha, no hace nada.
+# Instalar: install -m 644 este fichero en /etc/systemd/system/, systemctl daemon-reload,
+# systemctl enable sip-personal-api-after-para.service. Rollback: disable + borrar el fichero.
+[Unit]
+Description=Start hermes-personal-api after PARA (${PARA_ROOT}) is mounted
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'for i in $(seq 1 150); do mountpoint -q ${PARA_ROOT} && [ -d ${PARA_ROOT}/00_entrada ] && { docker start hermes-personal-api; exit $?; }; sleep 2; done; echo "PARA sin montar tras 300s" >&2; exit 1'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,3 @@
+# /etc/tmpfiles.d/sip-energia.conf (05-11): estado de actividad de HALO y huella de la petición de apagado
+d /run/sip-energia     0755 root        root        -
+d /run/sip-energia-pet 0770 root        sip-energia -

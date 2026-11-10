@@ -1,0 +1,67 @@
+# sip-gateway (v2.4, Fase 7): Telegram -> zonas, sin LLM. Solo su estado y el token del bot.
+# Red gateway: solo Telegram y DNS (nftables). gw-research, gw-coding y gw-personal: internal, solo hacia la API de cada zona.
+# Rollback: docker compose down -v.
+name: sip-gateway
+
+services:
+  sip-gateway:
+    image: python@sha256:b18b261e1b4974b4f321451ad5251ded85abb22c2b8b262da527dda1d031ab30  # 3.12-slim (05-11)
+    container_name: sip-gateway
+    restart: unless-stopped
+    # Logs de Docker acotados (M.12, 03-11): 10m x 5 por contenedor.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    init: true
+    user: "978:978"
+    command: ["python3", "-I", "-u", "/app/sip_gateway.py"]
+    env_file:
+      - /root/sip-telegram.env
+      - /root/sip-gateway-zones.env  # RESEARCH_, CODING_ y PERSONAL_API_KEY (de apply-gateway.sh)
+    volumes:
+      - ./sip_gateway.py:/app/sip_gateway.py:ro
+      - state:/data
+      # Notas de voz (05-11): buzón con el puente del host sip-voz-bridge (Whisper en HALO). Solo esta carpeta.
+      - type: bind
+        source: /var/lib/sip-voz
+        target: /voz
+        bind:
+          create_host_path: false
+      # Avisos de tareas en segundo plano (05-11): buzón de PERSONAL (solo JSON de formato fijo, validado).
+      - type: bind
+        source: /var/lib/sip-avisos/personal
+        target: /avisos/p
+        bind:
+          create_host_path: false
+    networks:
+      gateway:
+        ipv4_address: 10.21.0.10
+      gw-research:
+        ipv4_address: 10.22.0.20
+      gw-coding:
+        ipv4_address: 10.24.0.20
+      gw-personal:
+        ipv4_address: 10.25.0.20
+    read_only: true
+    mem_limit: 128m
+    cpus: "0.5"
+    pids_limit: 32
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  state:
+
+networks:
+  gateway:
+    external: true
+  gw-research:
+    external: true
+  gw-coding:
+    external: true
+  gw-personal:
+    external: true

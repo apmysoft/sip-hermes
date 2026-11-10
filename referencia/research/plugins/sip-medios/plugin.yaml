@@ -1,0 +1,4 @@
+name: sip-medios
+version: 1.0.0
+description: "Descarga audio, subtítulos o vídeo con yt-dlp y lo entrega en 00_entrada por filegate."
+author: SIP

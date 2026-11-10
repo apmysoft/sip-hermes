@@ -1,0 +1,43 @@
+name: sip-vaultwarden
+
+# Gestor de secretos SIP (Bloque 5c, 27-10-2026).
+# - Solo loopback del host: el acceso tailnet entra por `tailscale serve`
+#   (docker exec tailscale tailscale serve --bg --https=443 http://127.0.0.1:8222).
+# - HTTPS real vía Tailscale (MagicDNS + HTTPS Certificates habilitados en la
+#   consola). URL: https://neo.${TAILNET_DOMAIN}
+# - La red `sip` limita el egress a tailnet+DNS: las comprobaciones HIBP
+#   fallarán (sin Internet); no es crítico en tailnet privado.
+# - Secretos (ADMIN_TOKEN) fuera del repo: /root/sip-vaultwarden.env (root 0400).
+services:
+  vaultwarden:
+    image: vaultwarden/server:1.37.5@sha256:4fe17f415f90087377d37c755e0ea3cf189dcc6794e49cdd2a9adbb4937d9e1f
+    container_name: vaultwarden
+    restart: unless-stopped
+    networks:
+      - sip
+    ports:
+      - "127.0.0.1:8222:80"    # solo loopback del host (host network de tailscale ve este 127.0.0.1)
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    env_file:
+      - /root/sip-vaultwarden.env
+    environment:
+      - DOMAIN=https://neo.${TAILNET_DOMAIN}
+      - SIGNUPS_ALLOWED=false
+      - INVITATIONS_ALLOWED=false
+      - ORG_CREATION_USERS=none
+      - WEBSOCKET_ENABLED=true
+    volumes:
+      - vw-data:/data
+
+networks:
+  sip:
+    external: true
+
+volumes:
+  vw-data:

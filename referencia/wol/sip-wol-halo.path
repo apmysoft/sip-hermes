@@ -1,0 +1,9 @@
+[Unit]
+Description=SIP WOL: vigila peticiones de despertar HALO
+
+[Path]
+DirectoryNotEmpty=${DOCKER_DATA}/hermes/workspace/_wol/requests
+Unit=sip-wol-halo.service
+
+[Install]
+WantedBy=paths.target

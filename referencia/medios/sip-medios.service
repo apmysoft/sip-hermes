@@ -1,0 +1,28 @@
+# sip-medios (06-11): herramientas de medios y documentos por HTTP, solo 127.0.0.1:8190. SIN arranque propio:
+# lo arranca y para llama-swap (modelo `medios`, grupo cpu) mediante sip-gpu-unidad y polkit. CPU únicamente.
+[Unit]
+Description=SIP medios: audio, vídeo, imagen y documentos por HTTP (lo gestiona llama-swap)
+
+[Service]
+User=sip-medios
+Group=sip-medios
+ExecStart=/opt/sip-medios/venv/bin/python -W ignore /usr/local/lib/sip-medios/sip-medios-api.py
+Restart=no
+Nice=5
+MemoryMax=12G
+TasksMax=512
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+# Sin Internet: solo él mismo y Whisper (subtítulos) en la IP de tailnet de HALO
+IPAddressDeny=any
+IPAddressAllow=localhost ${HALO_TAILNET_IP}

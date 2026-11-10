@@ -1,0 +1,22 @@
+[Unit]
+Description=filegate per-connection broker (SIP Fase 1B)
+
+[Service]
+User=filegate
+ExecStart=/usr/local/bin/filegate.sh
+StandardInput=socket
+StandardOutput=socket
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX
+CapabilityBoundingSet=
+LockPersonality=yes
+# Un bug de logica NO es un bypass: solo estos paths son escribibles
+ReadWritePaths=${STAGING_ROOT}/_staging ${STAGING_ROOT}/_cuarentena \
+ ${STAGING_ROOT}/_journal ${PARA_ROOT} /var/log/filegate

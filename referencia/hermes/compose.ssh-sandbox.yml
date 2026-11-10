@@ -1,0 +1,8 @@
+# Usar junto al compose base: docker compose -f docker-compose.yml -f compose.ssh-sandbox.yml up -d
+# (la imagen ya incluye la cadena sqlite + ssh-client).
+# Vuelta: base + compose.ssh-client.yml recupera la imagen anterior.
+# Cambiar imagen no restaura datos/config automaticamente.
+services:
+  hermes-webui:
+    image: hermes-webui-sip:ssh-sandbox-test
+    pull_policy: never

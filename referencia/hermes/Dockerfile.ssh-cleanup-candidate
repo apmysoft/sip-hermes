@@ -1,0 +1,5 @@
+# Candidata separada; no cambia Compose ni actualiza versiones del agente/WebUI.
+FROM hermes-webui-sip:sqlite-3.53.4-test
+USER root
+COPY patch-ssh-cleanup.py /opt/sip-ssh-cleanup/patch.py
+RUN /app/venv/bin/python /opt/sip-ssh-cleanup/patch.py /opt/hermes-agent

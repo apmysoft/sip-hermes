@@ -1,0 +1,17 @@
+#!/bin/sh
+# Orden forzada de la clave de Neo (authorized_keys de sip-energia, 05-11). Solo tres órdenes:
+#   estado | apagar-auto | apagar-usuario <huella de 16 hex>
+set -u
+r=/run/sip-energia
+case "${SSH_ORIGINAL_COMMAND:-}" in
+  estado)
+    systemctl start sip-actividad.service && cat $r/estado.json ;;
+  apagar-auto)
+    systemctl start sip-apagar-auto.service && cat $r/apagar.json ;;
+  apagar-usuario\ *)
+    h=${SSH_ORIGINAL_COMMAND#apagar-usuario }
+    case "$h" in *[!0-9a-f]*|'') echo '{"ok":false,"error":"huella no válida"}'; exit 1;; esac
+    [ ${#h} -eq 16 ] || { echo '{"ok":false,"error":"huella no válida"}'; exit 1; }
+    printf '%s\n' "$h" > /run/sip-energia-pet/huella && systemctl start sip-apagar-usuario.service && cat $r/apagar.json ;;
+  *) echo '{"ok":false,"error":"orden no permitida"}'; exit 1 ;;
+esac

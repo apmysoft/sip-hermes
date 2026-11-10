@@ -1,0 +1,33 @@
+[Unit]
+Description=SIP ComfyUI (solo localhost; lo arranca y para llama-swap, planificador de GPU 05-11)
+After=network.target
+
+[Service]
+User=sip-comfy
+Group=sip-comfy
+SupplementaryGroups=render video
+WorkingDirectory=/opt/sip-comfyui/ComfyUI
+# --disable-smart-memory: descarga los modelos de la VRAM al terminar cada trabajo.
+# Sin arranque propio: lo gestiona llama-swap (modelo comfyui_auto, :11434/comfyui/; sip-config/gpu-halo/).
+ExecStart=/opt/sip-comfyui/venv/bin/python main.py --listen 127.0.0.1 --port 8188 --disable-smart-memory --disable-pinned-memory --cache-none --disable-auto-launch
+Environment=HSA_OVERRIDE_GFX_VERSION=11.0.0
+# 09-11: sin rearranque propio; lo arranca y lo para llama-swap (tras un OOM se rearrancaba fuera de su control).
+Restart=no
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/opt/sip-comfyui
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+# 09-11 (Qwen-Image): 24 GB, el máximo seguro con la sesión del usuario normal (~7-12 GB sin demonios de Gradle). ComfyUI no usa swap
+# (no empuja la sesión a disco) y, si falta memoria, el sistema lo mata a él primero. Sin memoria pinned (8 GB fijos)
+# ni caché de modelos entre trabajos (--cache-none): dos Qwen-Image seguidas pasaban de 24 GB.
+MemoryMax=24G
+MemorySwapMax=0
+OOMScoreAdjust=1000
+
+[Install]
+WantedBy=multi-user.target

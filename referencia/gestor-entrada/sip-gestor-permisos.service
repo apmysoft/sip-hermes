@@ -1,0 +1,19 @@
+[Unit]
+Description=SIP Gestor de Entrada — lectura de grupo para las peticiones de Hermes (antes del puente)
+Documentation=https://github.com/usuario/sip-inventario
+
+[Service]
+Type=oneshot
+# El mismo usuario que Hermes en el contenedor (uid 1000): no gana acceso nuevo.
+User=usuario
+Group=usuario
+ExecStart=/usr/local/bin/sip-gestor-permisos.py
+NoNewPrivileges=true
+CapabilityBoundingSet=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=true
+PrivateDevices=true
+PrivateNetwork=true
+RestrictAddressFamilies=none
+ReadWritePaths=${DOCKER_DATA}/hermes/workspace/_gestor/requests

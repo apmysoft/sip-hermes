@@ -1,0 +1,9 @@
+[Unit]
+Description=SIP WOL para sip-flujos: vigila las peticiones del worker (06-11)
+
+[Path]
+DirectoryNotEmpty=/var/lib/sip-flujos/wol/requests
+Unit=sip-wol-flujos.service
+
+[Install]
+WantedBy=paths.target

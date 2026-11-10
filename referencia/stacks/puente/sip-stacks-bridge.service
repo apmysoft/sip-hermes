@@ -1,0 +1,18 @@
+[Unit]
+Description=SIP puente de stacks — peticiones de Hermes sobre los stacks de Dockge (host)
+# Root porque necesita Docker. Superficie cerrada en sip-stacks-request.py; lo que tiene efecto exige el
+# código de un solo uso de Telegram. Ficheros del puente por descriptores con O_NOFOLLOW.
+
+StartLimitIntervalSec=60
+StartLimitBurst=30
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/sip-stacks-request.py
+TimeoutStartSec=1800
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+# 09-11, fase B: ${DOCKER_DATA}/stacks para crear stacks nuevos (el código solo escribe en la carpeta nueva).
+ReadWritePaths=${DOCKER_DATA}/hermes/workspace/_stacks /var/lib/sip-stacks /var/lib/sip-notify/outbox /root/sip-agent-backups /root/.docker ${DOCKER_DATA}/stacks

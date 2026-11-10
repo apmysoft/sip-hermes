@@ -1,0 +1,11 @@
+# OBSOLETO: Kimi ya está en litellm.config.yaml desde el 02-11-2026. Fichero sin uso.
+# Valores de la guía oficial de Kimi para Hermes. Comprobar con la clave que el plan Plus
+# incluye este modelo; k3.1-pro rechaza las peticiones sin razonamiento.
+model_list:
+  - model_name: k3.1-pro
+    litellm_params:
+      model: openai/k3.1-pro
+      api_base: https://api.kimi.ai/coding/v1
+      api_key: os.environ/KIMI_API_KEY
+      extra_body:
+        reasoning_effort: high

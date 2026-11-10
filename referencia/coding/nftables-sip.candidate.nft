@@ -1,0 +1,38 @@
+#!/usr/sbin/nft -f
+# CANDIDATO Fase 7 (zona CODING) — NO APLICADO. Respecto al vigente (gateway) añade la red coding
+# (10.23.0.0/24): solo HALO :22 y :11434; LiteLLM se alcanza dentro del bridge (10.23.0.10). Sin DNS
+# externo, LAN ni internet. Y el enlace gw-coding (10.24.0.0/24, internal), como gw-research.
+table inet sip-zones {
+    chain forward {
+        type filter hook forward priority -50; policy accept;
+        ct state established,related accept
+        # sandbox: internal=true + doble candado
+        ip saddr 172.30.0.0/24 counter log prefix "sip-drop-sandbox " drop
+        # gateway: solo Telegram y DNS
+        ip saddr 10.21.0.0/24 meta l4proto { tcp, udp } th dport 53 accept
+        ip saddr 10.21.0.0/24 ip daddr { 91.105.192.0/23, 91.108.4.0/22, 91.108.8.0/22, 91.108.12.0/22, 91.108.16.0/22, 91.108.20.0/22, 91.108.56.0/22, 149.154.160.0/20, 185.76.151.0/24 } tcp dport 443 accept
+        ip saddr 10.21.0.0/24 counter log prefix "sip-drop-gateway " drop
+        # enlaces gateway-zona: el tráfico va dentro del bridge; nada se reenvía fuera
+        ip saddr { 10.22.0.0/24, 10.24.0.0/24 } counter log prefix "sip-drop-gwlink " drop
+        # coding: solo SSH del worker y Ollama de HALO
+        ip saddr 10.23.0.0/24 ip daddr ${HALO_TAILNET_IP} tcp dport { 22, 11434 } accept
+        ip saddr 10.23.0.0/24 counter log prefix "sip-drop-coding " drop
+        # research: excepciones M.1 antes del cierre de RFC1918
+        ip saddr 10.20.0.10 ip daddr ${HALO_TAILNET_IP} tcp dport 11434 accept
+        ip saddr 10.20.0.0/24 ip daddr 10.20.0.10 tcp dport 4000 accept
+        ip saddr 10.20.0.0/24 ip daddr { 10.0.0.0/8, 172.16.0.0/12, ${LAN_SUBNET}/16, 100.64.0.0/10, 169.254.0.0/16, 127.0.0.0/8 } counter log prefix "sip-drop-research " drop
+        ip saddr 10.20.0.0/24 accept
+        # sip: solo tailnet (HALO Ollama/SSH) + DNS; LAN y resto de RFC1918 cerrados
+        ip saddr 172.29.0.0/24 ip daddr 100.64.0.0/10 accept
+        ip saddr 172.29.0.0/24 meta l4proto { tcp, udp } th dport 53 accept
+        # excepcion Bloque 4a: backend SSH del runner sandbox (Hermes -> runner:2222).
+        ip saddr 172.29.0.0/24 ip daddr 172.30.0.0/24 tcp dport 2222 counter accept
+        ip saddr 172.29.0.0/24 counter log prefix "sip-drop-sip " drop
+    }
+    chain input {
+        type filter hook input priority -50; policy accept;
+        ct state established,related accept
+        # los contenedores de zona no necesitan hablar CON el host
+        ip saddr { 10.20.0.0/24, 10.21.0.0/24, 10.22.0.0/24, 10.23.0.0/24, 10.24.0.0/24, 172.29.0.0/24, 172.30.0.0/24 } counter log prefix "sip-drop-in " drop
+    }
+}

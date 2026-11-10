@@ -1,0 +1,23 @@
+[Unit]
+Description=SIP WOL: emisor de magic packets hacia HALO (host, con limite)
+
+[Service]
+Type=oneshot
+User=sip-wol
+Group=sip-wol
+SupplementaryGroups=sip-notify
+StateDirectory=sip-wol
+StateDirectoryMode=0700
+ExecStart=/usr/local/sbin/sip-wol-halo.py
+TimeoutStartSec=240
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET
+CapabilityBoundingSet=
+IPAddressDeny=any
+IPAddressAllow=${HALO_TAILNET_IP} ${LAN_BROADCAST}
+ReadWritePaths=${DOCKER_DATA}/hermes/workspace/_wol /var/lib/sip-notify/outbox

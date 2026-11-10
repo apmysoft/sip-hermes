@@ -1,0 +1,89 @@
+# HERMES_HOME de hermes-research (v0.22.7 desde el 05-11). Sin secretos: LITELLM_API_KEY llega por env_file.
+# Navegador = plugin sip-navegador (0.22.7 retira browser_navigate; browser_exec exige terminal y v2.4 no se
+# la da a RESEARCH), sin sip-browser-guard (su gancho era de browser_navigate), tool_search desactivado.
+# 10-11 (decisión del usuario): modelo LOCAL primero. El cupo gratuito de Gemini (~20 peticiones/día por modelo) se
+# agotaba con una o dos tareas; v2.4 §H.3 permite local para RESEARCH (sin datos personales). qwen3.8:27b en HALO por
+# LiteLLM (misma clave; 64K); si HALO no responde, Hermes pasa a Gemini (un cambio por turno).
+model:
+  default: qwen3.8:27b
+  provider: custom:litellm
+providers:
+  litellm:
+    base_url: http://10.20.0.10:4000/v1
+    key_env: LITELLM_API_KEY
+    default_model: qwen3.8:27b
+    context_length: 65536
+agent:
+  api_max_retries: 1
+  # Endurecimiento 0.22.x (sip-config/hermes/endurecer-config.py): sin conectores remotos.
+  disabled_toolsets:
+    - connections
+fallback_providers:
+  - provider: custom:litellm
+    model: gemini-3.5-flash-lite
+platform_toolsets:
+  cli:
+    - navegador
+    - entrada
+    - search
+    - medios
+  # API para sip-gateway (Fase 7). Sin esto hereda hermes-api-server: terminal, file, code_execution...
+  api_server:
+    - navegador
+    - entrada
+    - search
+    - medios
+# Fase 8 (v2.4, decisión 9): ninguna escritura de memoria ni de skills sin revisión humana.
+memory:
+  write_approval: true
+skills:
+  write_approval: true
+plugins:
+  enabled:
+    - sip-entrada
+    - sip-navegador
+    - sip-medios
+browser:
+  # 0.22.7: sin `backend` (v52 lo retira). browser_exec no aparece: RESEARCH no tiene terminal.
+  allow_private_urls: false
+tools:
+  # 0.22.x esconde las herramientas de plugins tras tool_search (más llamadas al modelo); con pocas, todas visibles.
+  tool_search:
+    enabled: "off"
+  connectors:
+    enabled: false
+# Defensa secundaria (v2.4 I): la primaria es la red. Banca, correo, redes personales, router.
+security:
+  # Fase 8: sin instalaciones de paquetes en tiempo de ejecución (cadena de suministro).
+  allow_lazy_installs: false
+  website_blocklist:
+    enabled: true
+    domains:
+      - accounts.google.com
+      - mail.google.com
+      - outlook.com
+      - outlook.live.com
+      - proton.me
+      - facebook.com
+      - instagram.com
+      - tiktok.com
+      - x.com
+      - twitter.com
+      - linkedin.com
+      - paypal.com
+      - bizum.es
+      - santander.com
+      - bancosantander.es
+      - bbva.es
+      - caixabank.es
+      - bancsabadell.com
+      - ing.es
+      - openbank.es
+      - ${LAN_GATEWAY}
+# Endurecimiento 0.22.x: sin inferencia de invitado de Nous, sin adoptar logins de otras CLI, sin buscar versiones.
+nous:
+  guest: false
+auth:
+  adopt_external_logins: false
+updates:
+  check: false

@@ -1,0 +1,29 @@
+# Candidata aislada: no sustituye Dockerfile.webui ni cambia el compose.
+# Base local verificada en Neo el 2026-10-06; comprobar ID antes del build.
+# ID esperado: sha256:053ce4d3efebebdd097beeba9b88266f15fb5875310a2fbf335567bb1a4b252b
+# Usuario de la imagen y del contenedor activo: root.
+ARG BASE_IMAGE=hermes-webui-sip:v0.52.113-a2026.9.14
+FROM ${BASE_IMAGE} AS sqlite-build
+USER root
+WORKDIR /tmp/sqlite-build
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends build-essential curl ca-certificates unzip tcl \
+ && curl -fSL https://www.sqlite.org/2026/sqlite-src-3530400.zip -o source.zip \
+ && /app/venv/bin/python -c 'import hashlib,pathlib; assert hashlib.sha3_256(pathlib.Path("source.zip").read_bytes()).hexdigest() == "b834d474b9b393d85a9e3ee4cc11f1329e007e9376a424ee740796f5c4bda3a8", "Checksum SQLite incorrecto"' \
+ && unzip -q source.zip \
+ && cd sqlite-src-3530400 \
+ && CFLAGS='-O2 -DSQLITE_ENABLE_FTS3_PARENTHESIS -DSQLITE_ENABLE_FTS3_TOKENIZER -DSQLITE_ENABLE_UNLOCK_NOTIFY -DSQLITE_SECURE_DELETE -DSQLITE_SOUNDEX -DSQLITE_LIKE_DOESNT_MATCH_BLOBS -DSQLITE_MAX_VARIABLE_NUMBER=250000 -DSQLITE_MAX_FUNCTION_ARG=127 -DSQLITE_DEFAULT_AUTOVACUUM=1 -DSQLITE_DEFAULT_RECURSIVE_TRIGGERS=1' \
+    ./configure --prefix=/opt/sip-sqlite --disable-static --disable-tcl --disable-readline \
+      --enable-fts3 --enable-fts4 --enable-fts5 --enable-rtree --enable-session \
+      --enable-dbpage --enable-dbstat --enable-column-metadata --enable-update-limit \
+ && make -j2 \
+ && make install
+
+FROM ${BASE_IMAGE}
+USER root
+COPY --from=sqlite-build /opt/sip-sqlite/lib/libsqlite3.so* /opt/sip-sqlite/lib/
+# Conserva la biblioteca Debian; prioridad de enlace solo en esta candidata.
+RUN printf '%s\n' /opt/sip-sqlite/lib > /etc/ld.so.conf.d/00-sip-sqlite.conf \
+ && ldconfig
+COPY verify-sqlite-candidate.py /opt/sip-sqlite/verify.py
+RUN /app/venv/bin/python /opt/sip-sqlite/verify.py

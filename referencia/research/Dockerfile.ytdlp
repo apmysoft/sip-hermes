@@ -1,0 +1,17 @@
+# SOLO VUELTA ATRÁS (05-11): la receta activa es Dockerfile (v0.22.7, yt-dlp incluido).
+# hermes-research + yt-dlp (05-11, pedido del usuario). yt-dlp fijado por versión y sha256 del wheel de
+# PyPI, extraído en /opt/yt-dlp (sin pip, sin dependencias opcionales, sin tocar el venv de Hermes).
+# Build: docker build -f Dockerfile.ytdlp -t hermes-research:0.26.0-a2026.9.14-ytdlp2026.10.26 .
+# Actualizar: cambiar YTDLP_VER y YTDLP_SHA (https://pypi.org/pypi/yt-dlp/json) y reconstruir.
+FROM hermes-research:0.26.0-a2026.9.14
+ARG YTDLP_VER=2026.10.26
+ARG YTDLP_SHA=a05c5b5d8562f7e8a62f5334348b406af4930d56d3a65f8021d14af0e22339ae
+USER root
+RUN cd /tmp \
+ && python3 -c "import urllib.request; urllib.request.urlretrieve('https://files.pythonhosted.org/packages/py3/y/yt-dlp/yt_dlp-${YTDLP_VER}-py3-none-any.whl', 'y.whl')" \
+ && echo "${YTDLP_SHA}  y.whl" | sha256sum -c - \
+ && python3 -m zipfile -e y.whl /opt/yt-dlp \
+ && rm y.whl \
+ && chmod -R a+rX /opt/yt-dlp \
+ && PYTHONPATH=/opt/yt-dlp python3 -m yt_dlp --version
+USER 995:985

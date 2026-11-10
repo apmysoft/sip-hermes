@@ -1,0 +1,50 @@
+name: hermes
+
+services:
+  hermes-webui:
+    image: hermes-webui-sip:v0.52.113-a2026.9.14
+    container_name: hermes-webui
+    restart: unless-stopped
+    networks:
+      sip:
+        ipv4_address: 172.29.0.200   # fijada (06-11): la excepción de nftables hacia sip-flujos va por IP
+    # Sin DNS externo (03-11): el DNS de Docker reenviaba desde el host a 1.1.1.1, fuera de nftables.
+    # La pasarela del bridge descarta en `input` (sip-drop-in); los nombres de contenedor siguen resolviendo.
+    dns:
+      - 172.29.0.1
+    ports:
+      - "${NEO_TAILNET_IP}:8787:8787"    # solo tailnet (Opción B)
+    volumes:
+      - hermes-home:/home/hermeswebui/.hermes
+      - ${HERMES_WORKSPACE}:/workspace
+    environment:
+      - HERMES_WEBUI_HOST=0.0.0.0
+      - HERMES_WEBUI_PORT=8787
+      - HERMES_WEBUI_STATE_DIR=/home/hermeswebui/.hermes/webui
+      - HERMES_WEBUI_AGENT_DIR=/opt/hermes-agent
+      - HERMES_WEBUI_PYTHON=/app/venv/bin/python
+      - WANTED_UID=${UID}
+      - WANTED_GID=${GID}
+      # Sin HERMES_WEBUI_PASSWORD (O4, 03-11): el terminal del agente heredaba la variable. La contraseña
+      # es password_hash en settings.json (sip-config/operacion/o4/fijar-password-webui.sh).
+    logging: &logs
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  perm-guardian:
+    image: busybox:1.36.1@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
+    container_name: hermes-perm-guardian
+    restart: unless-stopped
+    logging: *logs
+    volumes:
+      - hermes-home:/data
+    command: ["/bin/sh", "-c", "while true; do find /data -exec chmod o-rwx {} + 2>/dev/null; sleep 60; done"]
+
+networks:
+  sip:
+    external: true
+
+volumes:
+  hermes-home:

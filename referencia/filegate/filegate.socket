@@ -1,0 +1,13 @@
+[Unit]
+Description=filegate socket (SIP — unica escritura PARA)
+
+[Socket]
+ListenStream=/run/filegate.sock
+Accept=yes
+SocketUser=root
+SocketGroup=filegate
+SocketMode=0660
+MaxConnectionsPerSource=20
+
+[Install]
+WantedBy=sockets.target

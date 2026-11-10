@@ -1,0 +1,114 @@
+# Zona CODING (v2.4, Fase 7): contenedor propio con solo el perfil coding. UID de zona 993:983.
+# Red coding: solo HALO :22/:11434 y LiteLLM (10.23.0.10, dentro del bridge). WebUI solo tailnet :8788.
+# Rollback: docker compose down (el volumen queda; -v lo borra). El perfil original sigue en hermes-webui.
+name: sip-coding
+
+services:
+  hermes-coding:
+    image: hermes-webui-sip:v0.52.544-a0.22.7  # WebUI v0.52.544 + agente v0.22.7 (05-11)
+    pull_policy: never
+    container_name: hermes-coding
+    restart: unless-stopped
+    networks:
+      - coding
+    # Sin DNS externo (03-11): ver la nota en hermes/docker-compose.yml. Salida a GitHub: revisar esto.
+    dns: &sin-dns
+      - 10.23.0.1
+    ports:
+      - "${NEO_TAILNET_IP}:8788:8787"
+    volumes:
+      - home:/home/hermeswebui/.hermes
+      # Solo el buzón del WOL (plugin sip-halo-wake), no el workspace de PERSONAL.
+      - ${DOCKER_DATA}/hermes/workspace/_wol:/workspace/_wol
+    environment:
+      - HERMES_WEBUI_HOST=0.0.0.0
+      - HERMES_WEBUI_PORT=8787
+      - HERMES_WEBUI_STATE_DIR=/home/hermeswebui/.hermes/webui
+      - HERMES_WEBUI_AGENT_DIR=/opt/hermes-agent
+      - HERMES_WEBUI_PYTHON=/app/venv/bin/python
+      - WANTED_UID=993
+      - WANTED_GID=983
+      # Sin internet: que Hermes no intente instalar paquetes al vuelo (edge-tts, boto3...).
+      - HERMES_DISABLE_LAZY_INSTALLS=1
+    # Sin HERMES_WEBUI_PASSWORD (O4, 03-11): la contraseña es password_hash en settings.json
+    # (sip-config/operacion/o4/fijar-password-webui.sh). /root/sip-coding-webui.env ya no se usa.
+    logging: &logs
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    mem_limit: 2g
+    cpus: "2.0"
+    pids_limit: 512
+    # El arranque corre como root (usermod, chown, rsync) y baja con su a 993.
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETUID
+      - SETGID
+    security_opt:
+      - no-new-privileges:true
+
+  # API para sip-gateway (/c): mismo perfil, solo plataforma API en gw-coding. Herramientas de
+  # api_server fijadas en config.yaml (terminal en HALO, file, todo, memory, session_search, skills).
+  # Sin tareas de cron en coding a 02-11; si se crean, este proceso también las ejecutaría.
+  hermes-coding-api:
+    image: hermes-webui-sip:v0.52.544-a0.22.7  # WebUI v0.52.544 + agente v0.22.7 (05-11)
+    pull_policy: never
+    container_name: hermes-coding-api
+    restart: unless-stopped
+    dns: *sin-dns
+    user: "993:983"
+    entrypoint: ["/app/venv/bin/hermes", "gateway", "run"]
+    working_dir: /home/hermeswebui
+    networks:
+      coding: {}
+      gw-coding:
+        ipv4_address: 10.24.0.10
+    volumes:
+      - home:/home/hermeswebui/.hermes
+      - ${DOCKER_DATA}/hermes/workspace/_wol:/workspace/_wol
+      # ssh exige entrada en passwd para el UID; la imagen trae hermeswebui en 1000 (generados de ella).
+      - ./passwd:/etc/passwd:ro
+      - ./group:/etc/group:ro
+      # Aprobaciones deterministas solo en la API (manual + 5 s => deniega). La genera make-api-config.sh.
+      - ./config.api.yaml:/home/hermeswebui/.hermes/config.yaml:ro
+    environment:
+      - HOME=/home/hermeswebui
+      - HERMES_DISABLE_LAZY_INSTALLS=1
+      - API_SERVER_ENABLED=true
+      - API_SERVER_HOST=10.24.0.10
+      - API_SERVER_PORT=8642
+    env_file:
+      - /root/sip-coding-api.env  # API_SERVER_KEY
+    logging: *logs
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=256m
+    mem_limit: 1g
+    cpus: "1.0"
+    pids_limit: 256
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    # La imagen comprueba la WebUI (:8787), que aquí no corre: se comprueba la API.
+    healthcheck:
+      test: ["CMD", "/app/venv/bin/python", "-c", "import socket; socket.create_connection(('10.24.0.10', 8642), 3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      - hermes-coding
+
+volumes:
+  home:
+
+networks:
+  coding:
+    external: true
+  gw-coding:
+    external: true

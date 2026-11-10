@@ -1,0 +1,9 @@
+[Unit]
+Description=SIP: informe semanal de actualizaciones, sabados por la manana
+
+[Timer]
+OnCalendar=Sat 10:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

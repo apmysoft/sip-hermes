@@ -1,0 +1,22 @@
+[Unit]
+Description=SIP Gestor de Entrada — puente de peticiones de Hermes (host)
+Documentation=https://github.com/usuario/sip-inventario
+# La herramienta de ficheros de Hermes crea 0600: antes de leer, lectura de grupo (03-11).
+Requires=sip-gestor-permisos.service
+After=sip-gestor-permisos.service
+
+[Service]
+Type=oneshot
+User=sip-gestor
+Group=sip-gestor
+# Para dejar en la bandeja de sip-notify el código de confirmación de los lotes (03-11).
+SupplementaryGroups=sip-notify
+ExecStart=/usr/local/bin/sip-gestor-request.py
+# Hardening: solo escribe en el puente, informes, state y la bandeja de avisos
+# Sin NoNewPrivileges (04-11, decisión del usuario): «confirmar» ejecuta apply, que usa
+# `sudo -n sip-gestor-filegate` (única regla de sudoers de sip-gestor). Con el flag, sudo no puede elevar
+# y los renombres confirmados fallaban. La barrera es el código de un solo uso del puente.
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=${DOCKER_DATA}/hermes/workspace/_gestor ${STAGING_ROOT}/_staging/_informes /var/lib/sip-gestor-entrada /var/lib/sip-notify/outbox

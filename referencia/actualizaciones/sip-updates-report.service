@@ -1,0 +1,17 @@
+[Unit]
+Description=SIP: informe semanal de actualizaciones (sin LLM, no aplica nada)
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Root para consultar apt, Docker y el registro de unattended-upgrades; necesita salir a los
+# registros de imágenes y a la API de GitHub.
+ExecStart=/usr/local/sbin/sip-updates-report.py
+# buildx necesita escribir su estado; /root no es accesible (ProtectHome): va al /tmp privado.
+Environment=DOCKER_CONFIG=/tmp/docker BUILDX_CONFIG=/tmp/buildx
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/sip-notify/outbox

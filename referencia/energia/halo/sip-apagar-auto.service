@@ -1,0 +1,15 @@
+[Unit]
+Description=SIP apagado de HALO por inactividad (comprueba de nuevo antes)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/sip-actividad.py apagar-auto
+TimeoutStartSec=90
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/run/sip-energia /run/sip-energia-pet
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_NETLINK

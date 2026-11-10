@@ -1,0 +1,21 @@
+[Unit]
+Description=SIP: auditoría trimestral (O4, O7 con logs de LiteLLM, O10, integridad, rotación)
+After=docker.service
+
+[Service]
+Type=oneshot
+# Root: lee los secretos reales (solo en memoria) para buscarlos fuera de su sitio, Docker y el journal.
+ExecStart=/usr/bin/python3 -I /usr/local/sbin/sip-auditoria.py
+# Código de salida 1 = auditoría con problemas: no es un fallo del servicio.
+SuccessExitStatus=1
+StateDirectory=sip-auditoria
+StateDirectoryMode=0700
+TimeoutStartSec=1800
+Nice=10
+IOSchedulingClass=idle
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=read-only
+ProtectSystem=strict
+ReadWritePaths=/var/lib/sip-notify/outbox
+IPAddressDeny=any

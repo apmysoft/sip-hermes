@@ -1,0 +1,34 @@
+# Whisper (whisper.cpp, CPU) en HALO para la transcripción de PERSONAL (05-11). Solo en la IP de tailnet.
+# La CPU, no la GPU: Ollama ocupa ~22 de 24 GB de VRAM. Prioridad baja para no estorbar al worker ni a Ollama.
+[Unit]
+Description=SIP whisper-server (transcripción local, CPU)
+After=network-online.target tailscaled.service
+Wants=network-online.target
+
+[Service]
+User=sip-whisper
+Group=sip-whisper
+ExecStartPre=/bin/sh -c 'for i in $(seq 120); do ip -4 a show tailscale0 | grep -q "inet ${HALO_TAILNET_IP}/" && exit 0; sleep 2; done; exit 1'
+ExecStart=/opt/sip-whisper/bin/whisper-server -m /opt/sip-whisper/models/ggml-large-v3-turbo-q5_0.bin --host ${HALO_TAILNET_IP} --port 8178 -t 16 -l auto --convert --tmp-dir /tmp
+Restart=on-failure
+RestartSec=10
+Nice=10
+CPUWeight=50
+MemoryMax=6G
+TasksMax=128
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+ReadOnlyPaths=/opt/sip-whisper
+
+[Install]
+WantedBy=multi-user.target

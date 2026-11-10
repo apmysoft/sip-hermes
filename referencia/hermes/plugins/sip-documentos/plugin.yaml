@@ -1,0 +1,4 @@
+name: sip-documentos
+version: 1.2.0
+description: "Segundo cerebro: busca por nombre y lee PDF/Word/texto de PARA, solo lectura y solo bajo /para."
+author: SIP

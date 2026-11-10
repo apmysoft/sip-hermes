@@ -1,0 +1,10 @@
+[Unit]
+Description=Retencion diaria de staging/cuarentena de filegate
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=60
+Persistent=true
+
+[Install]
+WantedBy=timers.target

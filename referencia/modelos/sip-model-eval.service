@@ -1,0 +1,18 @@
+[Unit]
+Description=SIP: evaluacion semanal de modelos (metricas LiteLLM + propuesta de RESEARCH; no cambia nada)
+After=docker.service
+
+[Service]
+Type=oneshot
+# Root para consultar la DB de LiteLLM y lanzar el cliente desechable en gw-research.
+ExecStart=/usr/local/sbin/sip-model-eval.py
+TimeoutStartSec=30min
+StateDirectory=sip-model-eval
+StateDirectoryMode=0700
+NoNewPrivileges=true
+PrivateTmp=true
+# read-only y no true: el cliente docker lee la clave de RESEARCH de /root (--env-file).
+ProtectHome=read-only
+ProtectSystem=strict
+ReadWritePaths=/var/lib/sip-notify/outbox
+Environment=DOCKER_CONFIG=/tmp/docker

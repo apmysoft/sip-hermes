@@ -1,0 +1,23 @@
+# Referencia PARCIAL saneada del config activo de Neo, aportada el 2026-10-06.
+# Modelo/proveedor actualizados tras CLI y lectura de config; URL según CLI.
+# No sustituye config.yaml ni es una configuración completa para desplegar.
+# URLs sin credenciales, query ni fragmentos; se omiten campos no inspeccionados.
+model:
+  default: qwen3.8:27b
+  provider: custom-ollama
+  base_url: http://${HALO_TAILNET_IP}:11434/v1
+runtime:
+  nofile_soft_limit: 4096
+terminal:
+  backend: local
+  timeout: 180
+  home_mode: auto
+  docker_mount_cwd_to_workspace: false
+  lifetime_seconds: 300
+  container_cpu: 1
+  container_memory: 5120
+  container_disk: 51200
+  container_persistent: true
+providers:
+  ollama:
+    base_url: http://${HALO_TAILNET_IP}:11434/v1

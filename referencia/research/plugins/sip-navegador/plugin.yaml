@@ -1,0 +1,4 @@
+name: sip-navegador
+version: 1.0.0
+description: "Navegador web de RESEARCH sin terminal (agent-browser con órdenes fijas y política de URL)."
+author: SIP

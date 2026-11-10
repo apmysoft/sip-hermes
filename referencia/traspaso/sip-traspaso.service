@@ -1,0 +1,22 @@
+[Unit]
+Description=SIP: traspaso nocturno de tareas de código a CODING, con verificador
+After=docker.service
+
+[Service]
+Type=oneshot
+# Salta sin hacer nada si la cola está vacía.
+ExecCondition=/usr/local/sbin/sip-traspaso.py check
+# Root para Docker: la API de CODING por gw-coding y el SSH del worker que ya usa CODING.
+ExecStart=/usr/local/sbin/sip-traspaso.py run
+TimeoutStartSec=6h
+# La clave de la API de CODING, sin abrir /root (ProtectHome).
+LoadCredential=coding-api.env:/root/sip-coding-api.env
+Environment=DOCKER_CONFIG=/tmp/docker
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/sip-traspaso /var/lib/sip-notify/outbox ${DOCKER_DATA}/hermes/workspace/_wol
+# Red de la unidad: solo la sonda de HALO (la API y el SSH salen desde contenedores).
+IPAddressDeny=any
+IPAddressAllow=localhost ${HALO_TAILNET_IP}/32

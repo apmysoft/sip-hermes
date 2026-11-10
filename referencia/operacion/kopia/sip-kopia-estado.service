@@ -1,0 +1,11 @@
+[Unit]
+Description=SIP: copia cifrada del estado SIP para Kopia (M.7)
+After=docker.service local-fs.target
+
+[Service]
+Type=oneshot
+Nice=10
+IOSchedulingClass=idle
+ExecStart=/usr/bin/python3 -I /usr/local/sbin/sip-kopia-estado.py --destino "${PARA_ROOT}/01_proyectos/Implementación SIP + Hermes agent/_copias-sip-estado"
+# Aviso por Telegram si falla (buzón de sip-notify, escritura atómica)
+ExecStopPost=/bin/sh -c '[ "$SERVICE_RESULT" = success ] && exit 0; f=kopia-$(date +%%Y%%m%%d-%%H%%M%%S).txt; o=/var/lib/sip-notify/outbox; echo "Copia del estado SIP para Kopia FALLIDA ($SERVICE_RESULT). Ver: journalctl -u sip-kopia-estado" > $o/.$f && mv $o/.$f $o/$f'

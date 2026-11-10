@@ -1,0 +1,6 @@
+# Segunda candidata del spike: parte del cierre ya probado, sin cambiar Compose.
+FROM hermes-webui-sip:ssh-cleanup-test
+USER root
+COPY ssh-client/ /opt/sip-ssh-client/bin/
+RUN chmod 0755 /opt/sip-ssh-client /opt/sip-ssh-client/bin /opt/sip-ssh-client/bin/ssh /opt/sip-ssh-client/bin/scp
+ENV PATH="/opt/sip-ssh-client/bin:${PATH}"

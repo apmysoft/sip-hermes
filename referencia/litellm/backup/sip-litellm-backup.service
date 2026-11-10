@@ -1,0 +1,8 @@
+[Unit]
+Description=SIP: copia cifrada de la DB de LiteLLM
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/sip-litellm-backup.sh

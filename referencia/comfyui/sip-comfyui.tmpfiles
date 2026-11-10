@@ -1,0 +1,4 @@
+# /etc/tmpfiles.d/sip-comfyui.conf (06-11): lo que genera ComfyUI se recoge por la API (sip-imagen lo copia a
+# /workspace/imagenes de Neo); en HALO se borra a los 2 días.
+e /opt/sip-comfyui/ComfyUI/output - - - 2d
+e /opt/sip-comfyui/ComfyUI/input  - - - 2d

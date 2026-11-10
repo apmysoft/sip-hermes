@@ -1,0 +1,13 @@
+[Unit]
+Description=SIP: puerta del tiny de Neo solo para PERSONAL (respaldo si HALO no responde, v2.4 §H.3)
+
+[Socket]
+# Puerta de enlace de la red `sip` (PERSONAL). FreeBind: arranca aunque Docker aún no haya creado el puente.
+ListenStream=172.29.0.1:11435
+FreeBind=true
+# Segunda barrera además de nftables: solo la WebUI y la API de PERSONAL.
+IPAddressAllow=172.29.0.200 172.29.0.201
+IPAddressDeny=any
+
+[Install]
+WantedBy=sockets.target

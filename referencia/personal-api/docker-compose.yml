@@ -1,0 +1,96 @@
+# API de PERSONAL para sip-gateway (/p), 04-11. Mismo perfil personal y mismo volumen que hermes-webui
+# (memoria y sesiones compartidas), con su propia config de API (aprobaciones deterministas: deniega).
+# Red sip (HALO, como la WebUI) + enlace gw-personal (internal) solo hacia el gateway. PARA en solo
+# lectura. Sin tareas de cron en personal a 04-11; si se crean, este proceso también las ejecutaría.
+# Rollback: docker compose down (no borra el volumen, que es el de hermes-webui).
+name: sip-personal-api
+
+services:
+  hermes-personal-api:
+    image: hermes-webui-sip:v0.52.544-a0.22.7  # WebUI v0.52.544 + agente v0.22.7 (05-11)
+    pull_policy: never
+    container_name: hermes-personal-api
+    restart: unless-stopped
+    user: "1000:1000"
+    entrypoint: ["/app/venv/bin/hermes", "gateway", "run"]
+    working_dir: /tmp
+    dns:
+      - 172.29.0.1
+    networks:
+      sip:
+        ipv4_address: 172.29.0.201   # fijada (06-11): la excepción de nftables hacia sip-flujos va por IP
+      gw-personal:
+        ipv4_address: 10.25.0.10
+    volumes:
+      # 0.22.7 no admite un gateway propio para un perfil bajo profiles/ ("un gateway por host"): se monta
+      # solo profiles/personal del volumen como HERMES_HOME (fuera de profiles/), como RESEARCH. Son los
+      # mismos ficheros que usa la WebUI (memoria y sesiones compartidas).
+      - type: volume
+        source: hermes-home
+        target: /opt/data
+        volume:
+          subpath: profiles/personal
+      # Perfiles de los subagentes de sip-flujos (06-11): la delegación por perfiles los busca en /opt/data/profiles.
+      - type: volume
+        source: hermes-home
+        target: /opt/data/profiles/redactor_resena
+        volume:
+          subpath: profiles/redactor_resena
+      - type: volume
+        source: hermes-home
+        target: /opt/data/profiles/redactor_ctue
+        volume:
+          subpath: profiles/redactor_ctue
+      - ${DOCKER_DATA}/hermes/workspace:/workspace
+      # Aprobaciones deterministas solo en la API. La genera make-api-config.sh.
+      - ./config.api.yaml:/opt/data/config.yaml:ro
+      - {type: bind, source: ${PARA_ROOT}/00_entrada, target: /para/00_entrada, read_only: true}
+      - {type: bind, source: ${PARA_ROOT}/01_proyectos, target: /para/01_proyectos, read_only: true}
+      - {type: bind, source: ${PARA_ROOT}/02_areas, target: /para/02_areas, read_only: true}
+      - {type: bind, source: ${PARA_ROOT}/03_recursos, target: /para/03_recursos, read_only: true}
+      - {type: bind, source: ${PARA_ROOT}/04_archivo, target: /para/04_archivo, read_only: true}
+      # Índice de texto de PARA (sip-indice, 09-11), solo lectura: activa documentos_buscar_texto.
+      - {type: bind, source: /var/lib/sip-indice, target: /indice, read_only: true, bind: {create_host_path: false}}
+      # Avisos de tareas en segundo plano para sip-gateway (05-11). Solo la API avisa; la WebUI no lo monta.
+      - {type: bind, source: /var/lib/sip-avisos/personal, target: /avisos, bind: {create_host_path: false}}
+    environment:
+      - HOME=/tmp
+      - HERMES_HOME=/opt/data
+      - HERMES_DISABLE_LAZY_INSTALLS=1
+      - API_SERVER_ENABLED=true
+      - API_SERVER_HOST=10.25.0.10
+      - API_SERVER_PORT=8642
+      - SIP_AVISOS_DIR=/avisos
+    env_file:
+      - /root/sip-personal-api.env  # API_SERVER_KEY
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=256m
+    mem_limit: 1g
+    cpus: "1.0"
+    pids_limit: 256
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "/app/venv/bin/python", "-c", "import socket; socket.create_connection(('10.25.0.10', 8642), 3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  hermes-home:
+    external: true
+    name: hermes_hermes-home
+
+networks:
+  sip:
+    external: true
+  gw-personal:
+    external: true

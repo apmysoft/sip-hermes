@@ -1,0 +1,4 @@
+name: sip-transcribir
+version: 1.2.0
+description: "Transcribe audio o vídeo de PARA o /workspace con Whisper local (HALO); el texto va a /workspace/transcripciones."
+author: SIP

@@ -1,0 +1,15 @@
+# SearXNG del SIP (06-11): solo lo usa hermes-research; sin limitador (no es público), JSON activado.
+use_default_settings: true
+general:
+  instance_name: "SIP"
+server:
+  limiter: false
+  public_instance: false
+  image_proxy: false
+  method: "GET"
+search:
+  safe_search: 0
+  default_lang: "es"
+  formats: [html, json]
+outgoing:
+  request_timeout: 6.0

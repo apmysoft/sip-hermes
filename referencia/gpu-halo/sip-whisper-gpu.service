@@ -1,0 +1,28 @@
+# Whisper en la GPU de HALO (whisper.cpp v1.9.5 con Vulkan, 05-11). Solo 127.0.0.1:8179. SIN arranque propio:
+# lo arranca y para llama-swap (modelo `whisper-gpu` del grupo gpu) cuando llega un audio largo por
+# :11434/upstream/whisper-gpu/inference. El de CPU (sip-whisper, :8178) sigue para las notas de voz.
+[Unit]
+Description=SIP whisper-server en GPU (Vulkan; lo gestiona llama-swap)
+
+[Service]
+User=sip-whisper
+Group=sip-whisper
+SupplementaryGroups=render video
+ExecStart=/opt/sip-whisper/bin/whisper-server-vulkan -m /opt/sip-whisper/models/ggml-large-v3-turbo-q5_0.bin --host 127.0.0.1 --port 8179 -l auto --convert --tmp-dir /tmp -fa
+Restart=no
+CacheDirectory=sip-whisper-gpu
+Environment=XDG_CACHE_HOME=/var/cache/sip-whisper-gpu
+MemoryMax=6G
+TasksMax=128
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+ReadOnlyPaths=/opt/sip-whisper

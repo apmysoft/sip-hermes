@@ -1,0 +1,14 @@
+[Unit]
+Description=SIP: recordatorio semanal de curacion de memoria (sin LLM)
+
+[Service]
+Type=oneshot
+# Root para leer los volumenes de las tres zonas; solo cuenta ficheros, no lee su contenido.
+ExecStart=/usr/local/sbin/sip-memory-review.py
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateNetwork=true
+ProtectHome=true
+ProtectSystem=strict
+ReadOnlyPaths=${DOCKER_DATA}/docker_root/volumes
+ReadWritePaths=/var/lib/sip-notify/outbox

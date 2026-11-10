@@ -1,0 +1,9 @@
+[Unit]
+Description=SIP: resumen matutino diario a las 8:00
+
+[Timer]
+OnCalendar=*-*-* 08:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
